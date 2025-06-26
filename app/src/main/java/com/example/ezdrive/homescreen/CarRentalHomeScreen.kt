@@ -1,4 +1,4 @@
-package com.example.ezdrive.screen
+package com.example.ezdrive.homescreen
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ezdrive.R
 import com.example.ezdrive.theme.EZDriveTheme
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -55,10 +57,12 @@ data class CarCategory(
 
 // --- DUMMY DATA ---
 val carCategoriesData = listOf(
+    CarCategory("all", "Semua", Icons.Filled.DirectionsCar),
+    CarCategory("popular", "Populer", Icons.Filled.Star),
     CarCategory("suv", "SUV", Icons.Filled.DirectionsCar),
-    CarCategory("sedan", "Sedan", Icons.Filled.LocalTaxi),
-    CarCategory("mpv", "MPV", Icons.Filled.People),
-    CarCategory("hatchback", "Hatchback", Icons.Filled.DirectionsCar)
+    CarCategory("sedan", "Sedan", Icons.Filled.DriveEta),
+    CarCategory("mpv", "MPV", Icons.Filled.DirectionsBus),
+    CarCategory("hatchback", "Hatchback", Icons.Filled.ElectricCar)
 )
 
 val featuredCarsData = listOf(
@@ -67,70 +71,159 @@ val featuredCarsData = listOf(
     CarItem(3, "Suzuki Ertiga", "MPV", "Rp 300.000", R.drawable.img_car_ertiga, 4.3f, 7, "Manual"),
     CarItem(4, "Mitsubishi Xpander", "MPV", "Rp 400.000", R.drawable.img_car_xpander, 4.6f, 7, "Automatic"),
     CarItem(5, "Daihatsu Terios", "SUV", "Rp 450.000", R.drawable.img_car_terios, 4.4f, 7, "Manual"),
-    CarItem(6, "Honda Brio", "Hatchback", "Rp 250.000", R.drawable.img_car_brio, 4.2f, 5, "Automatic")
+    CarItem(6, "Honda Brio", "Hatchback","Rp 250.000", R.drawable.img_car_brio, 4.2f, 5, "Automatic")
 )
 
-// --- MAIN SCREEN ---
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarRentalHomeScreen(onCarClicked: (CarItem) -> Unit) {
     var selectedCategory by remember { mutableStateOf<CarCategory?>(null) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    val configuration = LocalConfiguration.current
+    val halfScreenWidth = configuration.screenWidthDp.dp / 2
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("EZ Drive", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { /* TODO */ }) {
-                        Icon(Icons.Filled.Menu, contentDescription = "Menu")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* TODO */ }) {
-                        Icon(Icons.Filled.Search, contentDescription = "Cari Mobil")
-                    }
-                    IconButton(onClick = { /* TODO */ }) {
-                        Icon(Icons.Outlined.Notifications, contentDescription = "Notifikasi")
-                    }
-                }
-            )
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(halfScreenWidth),
+                drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomStart = 24.dp)
+            ) {
+                NavigationPaneContent(
+                    userName = "Nolan Mahotama",
+                    userLocation = "Makassar",
+                    profilePicRes = R.drawable.img_profile_small
+                )
+            }
         }
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(top = 8.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            item { LocationAndDateCard() }
-            item {
-                CarCategoriesSection(
-                    categories = carCategoriesData,
-                    selectedCategory = selectedCategory,
-                    onCategorySelected = { category ->
-                        selectedCategory = if (selectedCategory?.id == category.id) null else category
+    ) {
+        Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = { Text("EZ Drive", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Filled.Menu, contentDescription = "Menu")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { }) {
+                            Icon(Icons.Filled.Search, contentDescription = "Cari Mobil")
+                        }
+                        IconButton(onClick = { }) {
+                            Icon(Icons.Outlined.Notifications, contentDescription = "Notifikasi")
+                        }
                     }
                 )
             }
-            item {
-                FeaturedCarsSection(
-                    title = selectedCategory?.let { "Mobil ${it.name}" } ?: "Pilihan Populer",
-                    cars = featuredCarsData,
-                    selectedCategory = selectedCategory,
-                    onCarClicked = onCarClicked
-                )
+        ) { paddingValues ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(top = 8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                item { LocationAndDateCard() }
+                item {
+                    CarCategoriesSection(
+                        categories = carCategoriesData,
+                        selectedCategory = selectedCategory,
+                        onCategorySelected = { category ->
+                            selectedCategory = category
+                        }
+                    )
+                }
+                item {
+                    val carsToShow = when (selectedCategory?.id) {
+                        "all", null -> featuredCarsData
+                        "popular" -> featuredCarsData.sortedByDescending { it.rating }
+                        else -> featuredCarsData.filter { it.type.equals(selectedCategory?.name, ignoreCase = true) }
+                    }
+                    val titleText = when (selectedCategory?.id) {
+                        "popular" -> "Pilihan Populer"
+                        "all", null -> "Semua Mobil"
+                        else -> "Mobil ${selectedCategory?.name}"
+                    }
+                    FeaturedCarsSection(
+                        title = titleText,
+                        cars = carsToShow,
+                        filterCategory = selectedCategory,
+                        onCarClicked = onCarClicked
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
+private fun NavigationPaneContent(userName: String, userLocation: String, profilePicRes: Int) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        Spacer(Modifier.height(20.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = userName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.LocationOn, contentDescription = "Lokasi")
+                    Spacer(Modifier.width(4.dp))
+                    Text(text = userLocation, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            Image(
+                painter = painterResource(id = profilePicRes),
+                contentDescription = "Profile",
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        }
+        Spacer(Modifier.height(24.dp))
+        Divider()
+        Spacer(Modifier.height(8.dp))
+        NavigationDrawerItem(
+            label = { Text("Home") },
+            icon = { Icon(Icons.Filled.Home, contentDescription = null) },
+            selected = true,
+            onClick = { /* TODO */ },
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+        NavigationDrawerItem(
+            label = { Text("Bookings") },
+            icon = { Icon(Icons.Filled.Bookmark, contentDescription = null) },
+            selected = false,
+            onClick = { /* TODO */ },
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+        NavigationDrawerItem(
+            label = { Text("Profile") },
+            icon = { Icon(Icons.Filled.Person, contentDescription = null) },
+            selected = false,
+            onClick = { /* TODO */ },
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+    }
+}
+
+@Composable
 fun SectionTitle(title: String) {
     Text(
-        text = title,
+            text = title,
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(bottom = 8.dp)
@@ -228,16 +321,13 @@ fun CarCategoriesSection(
 fun FeaturedCarsSection(
     title: String,
     cars: List<CarItem>,
-    selectedCategory: CarCategory?,
+    filterCategory: CarCategory?,
     onCarClicked: (CarItem) -> Unit
 ) {
     Column {
         SectionTitle(title)
-        val filteredCars = selectedCategory?.let { cats ->
-            cars.filter { it.type.equals(cats.name, ignoreCase = true) }
-        } ?: cars
         LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            items(filteredCars) { car ->
+            items(cars) { car ->
                 Card(
                     modifier = Modifier
                         .width(200.dp)
@@ -259,13 +349,13 @@ fun FeaturedCarsSection(
                             Text(car.pricePerDay, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.Star, contentDescription = null, tint = Color(0xFFFFD700))
+                                Icon(Icons.Filled.Star, contentDescription = null, tint = Color(0xFFFFD700))
                                 Spacer(Modifier.width(4.dp))
                                 Text(car.rating.toString(), style = MaterialTheme.typography.bodySmall)
                                 Spacer(Modifier.weight(1f))
                                 Text("${car.seats} seats", style = MaterialTheme.typography.bodySmall)
                             }
-                            Spacer(Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(car.transmission, style = MaterialTheme.typography.bodySmall)
                         }
                     }
@@ -275,6 +365,7 @@ fun FeaturedCarsSection(
     }
 }
 
+
 @Preview(showBackground = true)
 @Composable
 fun PreviewCarRentalHome() {
@@ -282,3 +373,7 @@ fun PreviewCarRentalHome() {
         CarRentalHomeScreen(onCarClicked = {})
     }
 }
+
+
+
+
