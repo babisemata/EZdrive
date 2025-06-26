@@ -1,4 +1,4 @@
-package com.example.ezdrive.theme // Ganti dengan package aplikasi Anda
+package com.example.ezdrive.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -39,7 +39,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun EZDriveTheme( // Ganti nama tema ini jika perlu
+fun EZDriveTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true, // Dynamic color di Android 12+
     content: @Composable () -> Unit

@@ -77,8 +77,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     // MongoDB Kotlin driver dependency
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
-    implementation("org.mongodb:mongodb-driver-sync:4.10.1")
-    implementation("org.mongodb:bson:4.11.1")
     implementation ("androidx.compose.material:material-icons-extended:1.5.0")
 
 
@@ -115,8 +113,8 @@ dependencies {
     // Show dynamic Imgae
     implementation("io.coil-kt:coil-compose:2.4.0")
 
-
-
+    implementation("androidx.activity:activity-compose:1.8.0")
+    implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.navigation:navigation-compose:2.9.0")
     implementation("androidx.compose.runtime:runtime-livedata:1.8.2")
     implementation("androidx.compose.runtime:runtime-saveable:1.8.2")
