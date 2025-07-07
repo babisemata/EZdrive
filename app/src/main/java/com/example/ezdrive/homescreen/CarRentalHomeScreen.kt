@@ -77,7 +77,7 @@ val featuredCarsData = listOf(
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CarRentalHomeScreen(onCarClicked: (CarItem) -> Unit) {
+fun CarRentalHomeScreen(onCarClicked: (CarItem) -> Unit, onProfile: () -> Unit) {
     var selectedCategory by remember { mutableStateOf<CarCategory?>(null) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -96,6 +96,7 @@ fun CarRentalHomeScreen(onCarClicked: (CarItem) -> Unit) {
                 NavigationPaneContent(
                     userName = "Nolan Mahotama",
                     userLocation = "Makassar",
+                    onProfile = { onProfile},
                     profilePicRes = R.drawable.img_profile_small
                 )
             }
@@ -163,7 +164,7 @@ fun CarRentalHomeScreen(onCarClicked: (CarItem) -> Unit) {
 }
 
 @Composable
-private fun NavigationPaneContent(userName: String, userLocation: String, profilePicRes: Int) {
+private fun NavigationPaneContent(userName: String, userLocation: String, profilePicRes: Int, onProfile: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -215,6 +216,13 @@ private fun NavigationPaneContent(userName: String, userLocation: String, profil
             icon = { Icon(Icons.Filled.Person, contentDescription = null) },
             selected = false,
             onClick = { /* TODO */ },
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+        NavigationDrawerItem(
+            label = { Text("Profile") },
+            icon = { Icon(Icons.Filled.PersonOutline, contentDescription = null) },
+            selected = false,
+            onClick = { onProfile },
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
         )
     }
@@ -366,13 +374,7 @@ fun FeaturedCarsSection(
 }
 
 
-@Preview(showBackground = true)
-@Composable
-fun PreviewCarRentalHome() {
-    EZDriveTheme {
-        CarRentalHomeScreen(onCarClicked = {})
-    }
-}
+
 
 
 

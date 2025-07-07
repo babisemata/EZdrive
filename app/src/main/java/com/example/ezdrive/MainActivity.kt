@@ -1,80 +1,133 @@
 package com.example.ezdrive
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.ezdrive.homescreen.CarRentalHomeScreen
-import com.example.ezdrive.theme.EZDriveTheme
 import com.example.ezdrive.loginpage.LoginScreen
 import com.example.ezdrive.loginpage.RegisterScreen
+import com.example.ezdrive.profile.ProfileScreen
+import com.example.ezdrive.service.SessionManager
+import com.example.ezdrive.service.handleLogin
+import com.example.ezdrive.service.handleRegister
+import com.example.ezdrive.theme.EZDriveTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // 1. State untuk tracking screen mana yang tampil
-            var currentScreen by remember { mutableStateOf<Screen>(Screen.Login) }
-            // 2. State login (jika perlu)
-            var isLoggedIn by remember { mutableStateOf(false) }
+            EZDriveApp()
+        }
+    }
+}
 
-            EZDriveTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    when (currentScreen) {
-                        Screen.Login -> {
-                            LoginScreen(
-                                onLogin = { email, password ->
-                                    // TODO: autentikasi, kalau sukses:
-                                    isLoggedIn = true
+@Composable
+fun EZDriveApp() {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+
+    var currentScreen by remember {
+        mutableStateOf(
+            if (sessionManager.isLoggedIn()) Screen.Home else Screen.Login
+        )
+    }
+
+    EZDriveTheme {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            when (currentScreen) {
+                Screen.Login -> {
+                    LoginScreen(
+                        onLogin = { email, password ->
+                            handleLogin(context, email, password) { success, role ->
+                                if (success) {
+                                    sessionManager.saveLogin(email, role)
+                                    Toast.makeText(context, "Login as $role", Toast.LENGTH_SHORT).show()
                                     currentScreen = Screen.Home
-                                },
-                                onNavigateToRegister = {
-                                    currentScreen = Screen.Register
+                                } else {
+                                    Toast.makeText(context, "Login failed", Toast.LENGTH_SHORT).show()
                                 }
-                            )
-                        }
-                        Screen.Register -> {
-                            RegisterScreen(
-                                onRegister = { name, email, password ->
-                                    // TODO: kirim data registrasi ke backend
-                                    // lalu kembali ke login (atau langsung login):
-                                    currentScreen = Screen.Login
-                                },
-                                onNavigateToLogin = {
-                                    currentScreen = Screen.Login
-                                }
-                            )
-                        }
-                        Screen.Home -> {
-                            CarRentalHomeScreen { carItem ->
-                                println("Mobil diklik: ${carItem.name}")
                             }
+                        },
+                        onNavigateToRegister = {
+                            currentScreen = Screen.Register
                         }
-                    }
+                    )
+                }
+
+                Screen.Register -> {
+                    RegisterScreen(
+                        onRegister = { name, email, password ->
+                            handleRegister(context, name, email, password) { success, message ->
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                if (success) {
+                                    currentScreen = Screen.Login
+                                }
+                            }
+                        },
+                        onNavigateToLogin = {
+                            currentScreen = Screen.Login
+                        }
+                    )
+                }
+
+                Screen.Home -> {
+                    CarRentalHomeScreen(
+                        onCarClicked = { carItem ->
+                            println("Mobil diklik: ${carItem.name}")
+                        },
+                        onProfile = {
+                            currentScreen = Screen.Profile
+                        }
+                    )
+                }
+
+                Screen.Profile -> {
+                    ProfileScreen(
+                        userEmail = sessionManager.getUserEmail() ?: "-",
+                        userRole = sessionManager.getUserRole() ?: "-",
+                        onLogout = {
+                            sessionManager.clearSession()
+                            Toast.makeText(context, "Logged out", Toast.LENGTH_SHORT).show()
+                            currentScreen = Screen.Login
+                        },
+                        onBack = {
+                            currentScreen = Screen.Home
+                        }
+                    )
                 }
             }
         }
     }
 }
 
-// Enum untuk memudahkan switch screen
-enum class Screen { Login, Register, Home }
+
+enum class Screen {
+    Login, Register, Home, Profile
+}
 
 
-// Anda dapat memindahkan preview ke file terpisah atau di bawah Composable utama Anda
-@Preview(showBackground = true, showSystemUi = true)
+@Preview(showBackground = true)
 @Composable
-fun DefaultPreview() {
-    EZDriveTheme { // Ganti EZDriveTheme dengan nama tema aplikasi Anda
-        CarRentalHomeScreen(onCarClicked = {})
+fun PreviewCarRentalHome() {
+    EZDriveTheme {
+        CarRentalHomeScreen(onCarClicked = {}, onProfile = {})
     }
 }
+//@Preview(showBackground = true, showSystemUi = true)
+//@Composable
+//fun DefaultPreview() {
+//    EZDriveTheme {
+//        CarRentalHomeScreen(onCarClicked = {})
+//    }
+//}
