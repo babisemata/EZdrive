@@ -2,17 +2,12 @@ package com.example.ezdrive.navigationbar
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.CarRental
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.People
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -21,23 +16,24 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.ezdrive.homescreen.CarRentalHomeScreen
-import com.example.ezdrive.screens.sewa
+import com.example.ezdrive.profile.ProfileScreen
+import com.example.ezdrive.screens.SewaScreen
 
-
-
+// Nav item sealed class
 sealed class NavItem(
     val route: String,
     val icon: ImageVector,
     val label: String
 ) {
-    object Home     : NavItem("home",     Icons.Filled.Home,      "Home")
-    object Bookings : NavItem("bookings", Icons.Filled.Bookmarks,"Bookings")
-    object Profile  : NavItem("profile",  Icons.Filled.People,    "Profile")
+    object Home    : NavItem("home",   Icons.Filled.Home,     "Home")
+    object Sewa    : NavItem("sewa",   Icons.Filled.CarRental,"Sewa")
+    object Profile : NavItem("profile",Icons.Filled.People,   "Profile")
 }
 
+// List item untuk bottom nav
 private val navItems = listOf(
     NavItem.Home,
-    NavItem.sewa,
+    NavItem.Sewa,
     NavItem.Profile
 )
 
@@ -67,21 +63,18 @@ fun BottomNavigationPane(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavigation() {
-    // Buat NavController
     val navController = rememberNavController()
-
-    // Dapatkan route aktif untuk highlight bottom bar
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: NavItem.Home.route
 
-    Scaffold (
+    Scaffold(
         bottomBar = {
             BottomNavigationPane(
                 currentRoute = currentRoute,
                 onItemSelected = { route ->
                     navController.navigate(route) {
-                        // Hindari penumpukan back stack
-                        popUpTo(navController.graph.findStartDestination().id) {
+                        // ✅ ganti ini supaya tidak error: pakai string route saja
+                        popUpTo(NavItem.Home.route) {
                             saveState = true
                         }
                         launchSingleTop = true
@@ -91,37 +84,56 @@ fun AppNavigation() {
             )
         }
     ) { innerPadding ->
-        // NavHost di dalam scaffold
         NavHost(
             navController = navController,
             startDestination = NavItem.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(NavItem.Home.route) {
-                CarRentalHomeScreen (
+                CarRentalHomeScreen(
                     currentRoute = currentRoute,
                     onNavigate = { navController.navigate(it) },
-                    onCarClicked = { /* TODO: aksi klik mobil */ },
-                    onProfile = { navController.navigate(NavItem.Profile.route) }
+                    onCarClicked = {
+                        // TODO: aksi ketika mobil diklik
+                    },
+                    onProfile = {
+                        navController.navigate(NavItem.Profile.route) {
+                            popUpTo(NavItem.Home.route) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 )
             }
-            composable(NavItem.Bookings.route) {
-                sewa (
+            composable(NavItem.Sewa.route) {
+                SewaScreen(
                     currentRoute = currentRoute,
                     onNavigate = { navController.navigate(it) },
-                    onCarClicked = { /* TODO: aksi klik mobil */ },
-                    onProfile = { navController.navigate(NavItem.Profile.route) }
+                    onBookingClick = { booking ->
+                        // TODO: aksi saat booking diklik
+                    }
                 )
             }
-
             composable(NavItem.Profile.route) {
                 ProfileScreen(
-                    currentRoute = currentRoute,
-                    onNavigate = { navController.navigate(it) }
+                    userEmail = "user@example.com",      // ganti dengan data login user
+                    userRole = "User",                   // ganti dengan role user
+                    onLogout = {
+                        // TODO: aksi logout
+                    },
+                    onBack = {
+                        navController.navigate(NavItem.Home.route) {
+                            popUpTo(NavItem.Home.route) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 )
             }
         }
     }
 }
-
-

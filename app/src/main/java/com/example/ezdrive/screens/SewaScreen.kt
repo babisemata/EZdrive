@@ -1,5 +1,6 @@
 package com.example.ezdrive.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,18 +8,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -26,7 +20,6 @@ import androidx.compose.ui.unit.sp
 import com.example.ezdrive.R
 import com.example.ezdrive.navigationbar.NavItem
 
-// Data class untuk booking
 data class BookingItem(
     val id: Int,
     val carName: String,
@@ -36,24 +29,14 @@ data class BookingItem(
     val imageRes: Int
 )
 
-// Status booking
 enum class BookingStatus { Pending, Confirmed, Cancelled }
 
-// Contoh data bookings
 val sampleBookings = listOf(
     BookingItem(1, "Toyota Avanza", "10 Jul 2025 - 12 Jul 2025", "Rp 700.000", BookingStatus.Confirmed, R.drawable.img_car_avanza),
     BookingItem(2, "Honda HR-V", "15 Jul 2025 - 17 Jul 2025", "Rp 1.100.000", BookingStatus.Pending, R.drawable.img_car_hrv),
     BookingItem(3, "Suzuki Ertiga", "20 Jul 2025 - 22 Jul 2025", "Rp 600.000", BookingStatus.Cancelled, R.drawable.img_car_ertiga)
 )
 
-/**
- * Composable SewaScreen menampilkan daftar booking.
- *
- * @param currentRoute route aktif (untuk bottom nav highlighting)
- * @param onNavigate fungsi navigasi antar route (contoh: NavItem.Home.route dll)
- * @param bookings daftar booking yang akan ditampilkan
- * @param onBookingClick callback saat booking diklik
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SewaScreen(
@@ -66,7 +49,6 @@ fun SewaScreen(
         topBar = {
             TopAppBar(
                 title = { Text(text = "Bookings", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.smallTopAppBarColors(),
                 navigationIcon = {
                     IconButton(onClick = { onNavigate(NavItem.Home.route) }) {
                         Icon(
@@ -82,7 +64,8 @@ fun SewaScreen(
                             contentDescription = "Filter"
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors()
             )
         }
     ) { paddingValues ->
@@ -124,11 +107,11 @@ fun BookingCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
         shape = MaterialTheme.shapes.medium
     ) {
         Row(modifier = Modifier.padding(12.dp)) {
-            Icon(
+            Image(
                 painter = painterResource(id = booking.imageRes),
                 contentDescription = booking.carName,
                 modifier = Modifier
