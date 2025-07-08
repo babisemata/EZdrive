@@ -88,9 +88,10 @@ fun CarRentalHomeScreen(
             CenterAlignedTopAppBar(
                 title = { Text("EZ Drive", fontWeight = FontWeight.Bold) },
                 actions = {
-                    IconButton(onClick = { /* search */ }) {
+                    IconButton(onClick = { onNavigate("search") }) {
                         Icon(Icons.Filled.Search, contentDescription = "Cari Mobil")
                     }
+
                     IconButton(onClick = { /* notifications */ }) {
                         Icon(Icons.Outlined.Notifications, contentDescription = "Notifikasi")
                     }
