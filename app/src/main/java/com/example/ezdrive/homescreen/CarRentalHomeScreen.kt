@@ -32,6 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ezdrive.R
+import com.example.ezdrive.navigationbar.BottomNavigationPane
 import com.example.ezdrive.theme.EZDriveTheme
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -77,40 +78,17 @@ val featuredCarsData = listOf(
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CarRentalHomeScreen(onCarClicked: (CarItem) -> Unit, onProfile: () -> Unit) {
+fun CarRentalHomeScreen(
+    currentRoute: String,
+    onNavigate: (route: String) -> Unit,
+    onCarClicked: (CarItem) -> Unit,
+    onProfile: () -> Unit
+) {
     var selectedCategory by remember { mutableStateOf<CarCategory?>(null) }
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    val configuration = LocalConfiguration.current
-    val halfScreenWidth = configuration.screenWidthDp.dp / 2
-
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(halfScreenWidth),
-                drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomStart = 24.dp)
-            ) {
-                NavigationPaneContent(
-                    userName = "Nolan Mahotama",
-                    userLocation = "Makassar",
-                    onProfile = { onProfile},
-                    profilePicRes = R.drawable.img_profile_small
-                )
-            }
-        }
-    ) {
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
                     title = { Text("EZ Drive", fontWeight = FontWeight.Bold) },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Filled.Menu, contentDescription = "Menu")
-                        }
-                    },
                     actions = {
                         IconButton(onClick = { }) {
                             Icon(Icons.Filled.Search, contentDescription = "Cari Mobil")
@@ -119,6 +97,12 @@ fun CarRentalHomeScreen(onCarClicked: (CarItem) -> Unit, onProfile: () -> Unit) 
                             Icon(Icons.Outlined.Notifications, contentDescription = "Notifikasi")
                         }
                     }
+                )
+            },
+            bottomBar = {
+                BottomNavigationPane(
+                    currentRoute = currentRoute,
+                    onItemSelected = onNavigate
                 )
             }
         ) { paddingValues ->
@@ -161,72 +145,6 @@ fun CarRentalHomeScreen(onCarClicked: (CarItem) -> Unit, onProfile: () -> Unit) 
             }
         }
     }
-}
-
-@Composable
-private fun NavigationPaneContent(userName: String, userLocation: String, profilePicRes: Int, onProfile: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
-    ) {
-        Spacer(Modifier.height(20.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = userName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.LocationOn, contentDescription = "Lokasi")
-                    Spacer(Modifier.width(4.dp))
-                    Text(text = userLocation, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-            Image(
-                painter = painterResource(id = profilePicRes),
-                contentDescription = "Profile",
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
-        }
-        Spacer(Modifier.height(24.dp))
-        Divider()
-        Spacer(Modifier.height(8.dp))
-        NavigationDrawerItem(
-            label = { Text("Home") },
-            icon = { Icon(Icons.Filled.Home, contentDescription = null) },
-            selected = true,
-            onClick = { /* TODO */ },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-        NavigationDrawerItem(
-            label = { Text("Bookings") },
-            icon = { Icon(Icons.Filled.Bookmark, contentDescription = null) },
-            selected = false,
-            onClick = { /* TODO */ },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-        NavigationDrawerItem(
-            label = { Text("Profile") },
-            icon = { Icon(Icons.Filled.Person, contentDescription = null) },
-            selected = false,
-            onClick = { /* TODO */ },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-        NavigationDrawerItem(
-            label = { Text("Profile") },
-            icon = { Icon(Icons.Filled.PersonOutline, contentDescription = null) },
-            selected = false,
-            onClick = { onProfile },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-    }
-}
 
 @Composable
 fun SectionTitle(title: String) {

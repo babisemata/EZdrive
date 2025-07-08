@@ -11,9 +11,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.rememberNavController
 import com.example.ezdrive.homescreen.CarRentalHomeScreen
 import com.example.ezdrive.loginpage.LoginScreen
 import com.example.ezdrive.loginpage.RegisterScreen
+import com.example.ezdrive.navigationbar.NavItem
 import com.example.ezdrive.profile.ProfileScreen
 import com.example.ezdrive.service.SessionManager
 import com.example.ezdrive.service.handleLogin
@@ -33,6 +36,7 @@ class MainActivity : ComponentActivity() {
 fun EZDriveApp() {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
+    val navController = rememberNavController()
 
     var currentScreen by remember {
         mutableStateOf(
@@ -88,7 +92,17 @@ fun EZDriveApp() {
                         },
                         onProfile = {
                             currentScreen = Screen.Profile
-                        }
+                        },
+                        onNavigate = { route ->
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        currentRoute = NavItem.Home.route,
                     )
                 }
 
@@ -121,7 +135,7 @@ enum class Screen {
 @Composable
 fun PreviewCarRentalHome() {
     EZDriveTheme {
-        CarRentalHomeScreen(onCarClicked = {}, onProfile = {})
+        CarRentalHomeScreen(onCarClicked = {}, onProfile = {}, onNavigate = {}, currentRoute = NavItem.Home.route)
     }
 }
 //@Preview(showBackground = true, showSystemUi = true)
