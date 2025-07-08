@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,9 +25,12 @@ fun ProfileScreen(
     userPhone: String? = null,
     userRole: String = "User",
     userLocation: String = "USA",
+    onEdit: () -> Unit,
     onBack: () -> Unit,
     onLogout: () -> Unit
 ) {
+    val context = LocalContext.current
+
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -57,16 +61,24 @@ fun ProfileScreen(
             ProfileItem(label = "Location", value = userLocation)
 
             Spacer(modifier = Modifier.height(32.dp))
-
+            Button(
+                onClick = onEdit,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Edit Profile")
+            }
             Button(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
                 Text("Logout")
             }
+
 
             Spacer(modifier = Modifier.height(8.dp))
 
             TextButton(onClick = onBack) {
                 Text("Back to Home")
             }
+
+
         }
     }
 }

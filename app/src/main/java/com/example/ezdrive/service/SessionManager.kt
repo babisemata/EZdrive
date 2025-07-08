@@ -32,4 +32,5 @@ class SessionManager(context: Context) {
     fun getUserRole(): String? {
         return prefs.getString("role", null)
     }
+
 }

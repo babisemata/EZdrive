@@ -33,7 +33,7 @@ private val allCars = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchScreen(
+fun fiturpencarian(
     onBack: () -> Unit,
     onCarClicked: (CarItem) -> Unit
 ) {

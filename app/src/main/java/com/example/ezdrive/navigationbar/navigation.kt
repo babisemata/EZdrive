@@ -23,6 +23,12 @@ import com.example.ezdrive.service.SessionManager
 import com.example.ezdrive.service.handleLogin
 import com.example.ezdrive.service.handleRegister
 import com.example.ezdrive.screens.SewaScreen
+import com.example.ezdrive.homescreen.CarItem
+import com.example.ezdrive.detailscreen.CarDetailScreen
+import com.example.ezdrive.search.fiturpencarian
+import com.example.ezdrive.profile.EditProfileScreen
+
+
 
 @Composable
 fun AppNavigation(sessionManager: SessionManager) {
@@ -98,7 +104,10 @@ fun AppNavigation(sessionManager: SessionManager) {
             composable(NavItem.Home.route) {
                 CarRentalHomeScreen(
                     onNavigate = { navController.navigate(it) },
-                    onCarClicked = { /* TODO */ },
+                    onCarClicked = { selectedCar ->
+                        navController.currentBackStackEntry?.savedStateHandle?.set("selected_car", selectedCar)
+                        navController.navigate("car_detail")
+                    },
                     onProfile = {
                         navController.navigate(NavItem.Profile.route) {
                             launchSingleTop = true
@@ -119,6 +128,7 @@ fun AppNavigation(sessionManager: SessionManager) {
                 ProfileScreen(
                     userEmail = sessionManager.getUserEmail() ?: "-",
                     userRole = sessionManager.getUserRole() ?: "-",
+                    onEdit   = { navController.navigate("edit_profile") },
                     onLogout = {
                         sessionManager.clearSession()
                         navController.navigate("login") {
@@ -139,6 +149,35 @@ fun AppNavigation(sessionManager: SessionManager) {
                     branchName = "Cabang Utama EZ Drive",
                     onBack = { navController.popBackStack() }
                 )
+            }
+
+            composable("search") {
+                fiturpencarian(
+                    onBack = { navController.popBackStack() },
+                    onCarClicked = { car ->
+                        // set selected_car dan navigasi ke detail, misal:
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("selected_car", car)
+                        navController.navigate("car_detail")
+                    }
+                )
+            }
+
+
+            composable("car_detail") {
+                val car = navController.previousBackStackEntry
+                    ?.savedStateHandle?.get<CarItem>("selected_car")
+
+                car?.let {
+                    CarDetailScreen(
+                        car = it,
+                        onBack = { navController.popBackStack() },
+                        onRentNow = { selected ->
+                            // Navigasi ke halaman pemesanan
+                        }
+                    )
+                }
             }
         }
     }

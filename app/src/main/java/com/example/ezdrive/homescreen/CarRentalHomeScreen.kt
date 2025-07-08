@@ -221,22 +221,6 @@ fun LocationAndDateCard(
                 Text(pickupLocation, Modifier.weight(1f))
                 Icon(Icons.Filled.ArrowForwardIos, contentDescription = null, Modifier.size(16.dp))
             }
-
-            Divider()
-
-            // Bar tanggal (tetap sama)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { /* TODO: date picker */ }
-                    .padding(vertical = 8.dp)
-            ) {
-                Icon(Icons.Outlined.DateRange, contentDescription = null)
-                Spacer(Modifier.width(12.dp))
-                Text(selectedDate.format(dateFormatter), Modifier.weight(1f))
-                Icon(Icons.Filled.ArrowForwardIos, contentDescription = null, Modifier.size(16.dp))
-            }
         }
     }
 }
