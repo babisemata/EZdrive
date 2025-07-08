@@ -1,135 +1,132 @@
-package com.example.ezdrive.navigationbar
+package com.example.ezdrive.navigation
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CarRental
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material3.*
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.ezdrive.homescreen.CarRentalHomeScreen
+import com.example.ezdrive.loginpage.LoginScreen
+import com.example.ezdrive.loginpage.RegisterScreen
+import com.example.ezdrive.navigationbar.BottomNavigationPane
+import com.example.ezdrive.navigationbar.NavItem
 import com.example.ezdrive.profile.ProfileScreen
+import com.example.ezdrive.service.SessionManager
+import com.example.ezdrive.service.handleLogin
+import com.example.ezdrive.service.handleRegister
 import com.example.ezdrive.screens.SewaScreen
 
-// Nav item sealed class
-sealed class NavItem(
-    val route: String,
-    val icon: ImageVector,
-    val label: String
-) {
-    object Home    : NavItem("home",   Icons.Filled.Home,     "Home")
-    object Sewa    : NavItem("sewa",   Icons.Filled.CarRental,"Sewa")
-    object Profile : NavItem("profile",Icons.Filled.People,   "Profile")
-}
-
-// List item untuk bottom nav
-private val navItems = listOf(
-    NavItem.Home,
-    NavItem.Sewa,
-    NavItem.Profile
-)
-
 @Composable
-fun BottomNavigationPane(
-    currentRoute: String,
-    onItemSelected: (route: String) -> Unit
-) {
-    NavigationBar {
-        navItems.forEach { item ->
-            NavigationBarItem(
-                icon = {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = item.label
-                    )
-                },
-                label = { Text(item.label) },
-                selected = currentRoute == item.route,
-                onClick = { onItemSelected(item.route) },
-                colors = NavigationBarItemDefaults.colors()
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AppNavigation() {
+fun AppNavigation(sessionManager: SessionManager) {
+    val context = LocalContext.current
     val navController = rememberNavController()
+    val isLoggedIn = sessionManager.isLoggedIn()
+
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route ?: NavItem.Home.route
+    val currentRoute = backStackEntry?.destination?.route ?: if (isLoggedIn) NavItem.Home.route else "login"
 
     Scaffold(
         bottomBar = {
-            BottomNavigationPane(
-                currentRoute = currentRoute,
-                onItemSelected = { route ->
-                    navController.navigate(route) {
-                        // ✅ ganti ini supaya tidak error: pakai string route saja
-                        popUpTo(NavItem.Home.route) {
-                            saveState = true
+            if (isLoggedIn) {
+                BottomNavigationPane(
+                    currentRoute = currentRoute,
+                    onItemSelected = { route ->
+                        navController.navigate(route) {
+                            popUpTo(NavItem.Home.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
                     }
-                }
-            )
+                )
+            }
         }
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = NavItem.Home.route,
+            startDestination = if (isLoggedIn) NavItem.Home.route else "login",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(NavItem.Home.route) {
-                CarRentalHomeScreen(
-                    currentRoute = currentRoute,
-                    onNavigate = { navController.navigate(it) },
-                    onCarClicked = {
-                        // TODO: aksi ketika mobil diklik
-                    },
-                    onProfile = {
-                        navController.navigate(NavItem.Profile.route) {
-                            popUpTo(NavItem.Home.route) {
-                                saveState = true
+            composable("login") {
+                LoginScreen(
+                    onLogin = { email, password ->
+                        handleLogin(context, email, password) { success, role ->
+                            if (success) {
+                                sessionManager.saveLogin(email, role)
+                                Toast.makeText(context, "Login as $role", Toast.LENGTH_SHORT).show()
+                                navController.navigate(NavItem.Home.route) {
+                                    popUpTo("login") { inclusive = true }
+                                }
+                            } else {
+                                Toast.makeText(context, "Login failed", Toast.LENGTH_SHORT).show()
                             }
-                            launchSingleTop = true
-                            restoreState = true
+                        }
+                    },
+                    onNavigateToRegister = {
+                        navController.navigate("register")
+                    }
+                )
+            }
+
+            composable("register") {
+                RegisterScreen(
+                    onRegister = { name, email, password ->
+                        handleRegister(context, name, email, password) { success, message ->
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                            if (success) {
+                                navController.navigate("login") {
+                                    popUpTo("register") { inclusive = true }
+                                }
+                            }
+                        }
+                    },
+                    onNavigateToLogin = {
+                        navController.navigate("login") {
+                            popUpTo("register") { inclusive = true }
                         }
                     }
                 )
             }
+
+            composable(NavItem.Home.route) {
+                CarRentalHomeScreen(
+                    onNavigate = { navController.navigate(it) },
+                    onCarClicked = { /* TODO */ },
+                    onProfile = {
+                        navController.navigate(NavItem.Profile.route) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+
             composable(NavItem.Sewa.route) {
                 SewaScreen(
                     currentRoute = currentRoute,
                     onNavigate = { navController.navigate(it) },
-                    onBookingClick = { booking ->
-                        // TODO: aksi saat booking diklik
-                    }
+                    onBookingClick = { /* TODO */ }
                 )
             }
+
             composable(NavItem.Profile.route) {
                 ProfileScreen(
-                    userEmail = "user@example.com",      // ganti dengan data login user
-                    userRole = "User",                   // ganti dengan role user
+                    userEmail = sessionManager.getUserEmail() ?: "-",
+                    userRole = sessionManager.getUserRole() ?: "-",
                     onLogout = {
-                        // TODO: aksi logout
+                        sessionManager.clearSession()
+                        navController.navigate("login") {
+                            popUpTo(0) { inclusive = true }
+                        }
                     },
                     onBack = {
                         navController.navigate(NavItem.Home.route) {
-                            popUpTo(NavItem.Home.route) {
-                                saveState = true
-                            }
                             launchSingleTop = true
-                            restoreState = true
                         }
                     }
                 )

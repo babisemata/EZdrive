@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,21 +23,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ezdrive.R
-import com.example.ezdrive.navigationbar.BottomNavigationPane
-import com.example.ezdrive.theme.EZDriveTheme
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-// --- DATA CLASSES ---
+// --- DATA MODELS ---
 data class CarItem(
     val id: Int,
     val name: String,
@@ -53,11 +47,11 @@ data class CarItem(
 data class CarCategory(
     val id: String,
     val name: String,
-    val iconRes: ImageVector
+    val icon: ImageVector
 )
 
 // --- DUMMY DATA ---
-val carCategoriesData = listOf(
+private val carCategories = listOf(
     CarCategory("all", "Semua", Icons.Filled.DirectionsCar),
     CarCategory("popular", "Populer", Icons.Filled.Star),
     CarCategory("suv", "SUV", Icons.Filled.DirectionsCar),
@@ -66,114 +60,109 @@ val carCategoriesData = listOf(
     CarCategory("hatchback", "Hatchback", Icons.Filled.ElectricCar)
 )
 
-val featuredCarsData = listOf(
+private val featuredCars = listOf(
     CarItem(1, "Toyota Avanza", "MPV", "Rp 350.000", R.drawable.img_car_avanza, 4.5f, 7, "Manual"),
     CarItem(2, "Honda HR-V", "SUV", "Rp 550.000", R.drawable.img_car_hrv, 4.8f, 5, "Automatic"),
     CarItem(3, "Suzuki Ertiga", "MPV", "Rp 300.000", R.drawable.img_car_ertiga, 4.3f, 7, "Manual"),
     CarItem(4, "Mitsubishi Xpander", "MPV", "Rp 400.000", R.drawable.img_car_xpander, 4.6f, 7, "Automatic"),
     CarItem(5, "Daihatsu Terios", "SUV", "Rp 450.000", R.drawable.img_car_terios, 4.4f, 7, "Manual"),
-    CarItem(6, "Honda Brio", "Hatchback","Rp 250.000", R.drawable.img_car_brio, 4.2f, 5, "Automatic")
+    CarItem(6, "Honda Brio", "Hatchback", "Rp 250.000", R.drawable.img_car_brio, 4.2f, 5, "Automatic")
 )
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarRentalHomeScreen(
-    currentRoute: String,
-    onNavigate: (route: String) -> Unit,
+    onNavigate: (String) -> Unit,
     onCarClicked: (CarItem) -> Unit,
     onProfile: () -> Unit
 ) {
     var selectedCategory by remember { mutableStateOf<CarCategory?>(null) }
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = { Text("EZ Drive", fontWeight = FontWeight.Bold) },
-                    actions = {
-                        IconButton(onClick = { }) {
-                            Icon(Icons.Filled.Search, contentDescription = "Cari Mobil")
-                        }
-                        IconButton(onClick = { }) {
-                            Icon(Icons.Outlined.Notifications, contentDescription = "Notifikasi")
-                        }
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("EZ Drive", fontWeight = FontWeight.Bold) },
+                actions = {
+                    IconButton(onClick = { /* search */ }) {
+                        Icon(Icons.Filled.Search, contentDescription = "Cari Mobil")
                     }
-                )
-            },
-            bottomBar = {
-                BottomNavigationPane(
-                    currentRoute = currentRoute,
-                    onItemSelected = onNavigate
+                    IconButton(onClick = { /* notifications */ }) {
+                        Icon(Icons.Outlined.Notifications, contentDescription = "Notifikasi")
+                    }
+                    IconButton(onClick = onProfile) {
+                        Icon(Icons.Filled.Person, contentDescription = "Profile")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            item { LocationAndDateCard() }
+
+            item {
+                CarCategoriesSection(
+                    categories = carCategories,
+                    selectedCategory = selectedCategory,
+                    onCategorySelected = { selectedCategory = it }
                 )
             }
-        ) { paddingValues ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(top = 8.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                item { LocationAndDateCard() }
-                item {
-                    CarCategoriesSection(
-                        categories = carCategoriesData,
-                        selectedCategory = selectedCategory,
-                        onCategorySelected = { category ->
-                            selectedCategory = category
-                        }
-                    )
+
+            item {
+                val filteredCars = when (selectedCategory?.id) {
+                    "popular" -> featuredCars.sortedByDescending { it.rating }
+                    "all", null -> featuredCars
+                    else -> featuredCars.filter { it.type.equals(selectedCategory?.name, ignoreCase = true) }
                 }
-                item {
-                    val carsToShow = when (selectedCategory?.id) {
-                        "all", null -> featuredCarsData
-                        "popular" -> featuredCarsData.sortedByDescending { it.rating }
-                        else -> featuredCarsData.filter { it.type.equals(selectedCategory?.name, ignoreCase = true) }
-                    }
-                    val titleText = when (selectedCategory?.id) {
-                        "popular" -> "Pilihan Populer"
-                        "all", null -> "Semua Mobil"
-                        else -> "Mobil ${selectedCategory?.name}"
-                    }
-                    FeaturedCarsSection(
-                        title = titleText,
-                        cars = carsToShow,
-                        filterCategory = selectedCategory,
-                        onCarClicked = onCarClicked
-                    )
+                val title = when (selectedCategory?.id) {
+                    "popular" -> "Pilihan Populer"
+                    "all", null -> "Semua Mobil"
+                    else -> "Mobil ${selectedCategory?.name}"
                 }
+
+                FeaturedCarsSection(
+                    title = title,
+                    cars = filteredCars,
+                    onCarClicked = onCarClicked
+                )
             }
         }
     }
+}
 
+// --- REUSABLE SECTIONS ---
 @Composable
-fun SectionTitle(title: String) {
+fun SectionTitle(text: String) {
     Text(
-            text = title,
+        text = text,
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(bottom = 8.dp)
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocationAndDateCard() {
     val today = LocalDate.now()
-    val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
+    val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
     var selectedDate by remember { mutableStateOf(today) }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text("Mau sewa mobil dimana?", fontWeight = FontWeight.Bold)
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -181,12 +170,14 @@ fun LocationAndDateCard() {
                     .clickable { /* TODO: location picker */ }
                     .padding(vertical = 8.dp)
             ) {
-                Icon(Icons.Outlined.LocationOn, contentDescription = "Lokasi")
+                Icon(Icons.Outlined.LocationOn, contentDescription = null)
                 Spacer(Modifier.width(12.dp))
                 Text("Pilih Lokasi Penjemputan", Modifier.weight(1f))
-                Icon(Icons.Filled.ArrowForwardIos, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Filled.ArrowForwardIos, null, Modifier.size(16.dp))
             }
+
             Divider()
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -194,10 +185,10 @@ fun LocationAndDateCard() {
                     .clickable { /* TODO: date picker */ }
                     .padding(vertical = 8.dp)
             ) {
-                Icon(Icons.Outlined.DateRange, contentDescription = "Tanggal")
+                Icon(Icons.Outlined.DateRange, contentDescription = null)
                 Spacer(Modifier.width(12.dp))
-                Text(selectedDate.format(formatter), Modifier.weight(1f))
-                Icon(Icons.Filled.ArrowForwardIos, contentDescription = null, modifier = Modifier.size(16.dp))
+                Text(selectedDate.format(dateFormatter), Modifier.weight(1f))
+                Icon(Icons.Filled.ArrowForwardIos, null, Modifier.size(16.dp))
             }
         }
     }
@@ -219,21 +210,21 @@ fun CarCategoriesSection(
                     modifier = Modifier
                         .clickable { onCategorySelected(category) }
                         .background(
-                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                            if (isSelected) MaterialTheme.colorScheme.primary.copy(0.1f)
                             else Color.Transparent,
-                            shape = CircleShape
+                            CircleShape
                         )
                         .padding(8.dp)
                 ) {
                     Icon(
-                        imageVector = category.iconRes,
+                        category.icon,
                         contentDescription = category.name,
                         tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray,
                         modifier = Modifier.size(32.dp)
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = category.name,
+                        category.name,
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray
                     )
@@ -247,7 +238,6 @@ fun CarCategoriesSection(
 fun FeaturedCarsSection(
     title: String,
     cars: List<CarItem>,
-    filterCategory: CarCategory?,
     onCarClicked: (CarItem) -> Unit
 ) {
     Column {
@@ -255,14 +245,14 @@ fun FeaturedCarsSection(
         LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             items(cars) { car ->
                 Card(
+                    shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .width(200.dp)
-                        .clickable { onCarClicked(car) },
-                    shape = RoundedCornerShape(12.dp)
+                        .clickable { onCarClicked(car) }
                 ) {
                     Column {
                         Image(
-                            painter = painterResource(id = car.imageUrl),
+                            painter = painterResource(car.imageUrl),
                             contentDescription = car.name,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
@@ -270,18 +260,18 @@ fun FeaturedCarsSection(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                         )
-                        Column(modifier = Modifier.padding(12.dp)) {
+                        Column(Modifier.padding(12.dp)) {
                             Text(car.name, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(car.pricePerDay, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Filled.Star, contentDescription = null, tint = Color(0xFFFFD700))
                                 Spacer(Modifier.width(4.dp))
-                                Text(car.rating.toString(), style = MaterialTheme.typography.bodySmall)
+                                Text("${car.rating}", style = MaterialTheme.typography.bodySmall)
                                 Spacer(Modifier.weight(1f))
                                 Text("${car.seats} seats", style = MaterialTheme.typography.bodySmall)
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(Modifier.height(4.dp))
                             Text(car.transmission, style = MaterialTheme.typography.bodySmall)
                         }
                     }
@@ -290,10 +280,3 @@ fun FeaturedCarsSection(
         }
     }
 }
-
-
-
-
-
-
-
