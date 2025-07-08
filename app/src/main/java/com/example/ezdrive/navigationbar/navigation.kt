@@ -21,6 +21,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.ezdrive.homescreen.CarRentalHomeScreen
+import com.example.ezdrive.screens.sewa
+
+
 
 sealed class NavItem(
     val route: String,
@@ -34,7 +37,7 @@ sealed class NavItem(
 
 private val navItems = listOf(
     NavItem.Home,
-    NavItem.Bookings,
+    NavItem.sewa,
     NavItem.Profile
 )
 
@@ -103,11 +106,14 @@ fun AppNavigation() {
                 )
             }
             composable(NavItem.Bookings.route) {
-                BookingsScreen(
+                sewa (
                     currentRoute = currentRoute,
-                    onNavigate = { navController.navigate(it) }
+                    onNavigate = { navController.navigate(it) },
+                    onCarClicked = { /* TODO: aksi klik mobil */ },
+                    onProfile = { navController.navigate(NavItem.Profile.route) }
                 )
             }
+
             composable(NavItem.Profile.route) {
                 ProfileScreen(
                     currentRoute = currentRoute,
