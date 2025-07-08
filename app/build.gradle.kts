@@ -121,4 +121,11 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.3.2")
     implementation("androidx.constraintlayout:constraintlayout-compose:1.1.1")
     implementation("androidx.compose.foundation:foundation:1.8.2")
+    implementation ("com.google.maps.android:maps-compose:2.11.2")
+    implementation ("com.google.android.gms:play-services-maps:18.1.0")
+    implementation ("com.google.android.gms:play-services-maps:18.1.0")
+    implementation ("com.google.maps.android:maps-compose:2.11.2")
+    implementation ("org.osmdroid:osmdroid-android:6.1.10")
+    implementation ("androidx.preference:preference-ktx:1.2.1")
+
 }

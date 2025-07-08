@@ -22,6 +22,7 @@ import com.example.ezdrive.service.SessionManager
 import com.example.ezdrive.service.handleLogin
 import com.example.ezdrive.service.handleRegister
 import com.example.ezdrive.screens.SewaScreen
+import com.example.ezdrive.maps.BranchMapScreen
 
 @Composable
 fun AppNavigation(sessionManager: SessionManager) {
@@ -30,7 +31,8 @@ fun AppNavigation(sessionManager: SessionManager) {
     val isLoggedIn = sessionManager.isLoggedIn()
 
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route ?: if (isLoggedIn) NavItem.Home.route else "login"
+    val currentRoute =
+        backStackEntry?.destination?.route ?: if (isLoggedIn) NavItem.Home.route else "login"
 
     Scaffold(
         bottomBar = {
@@ -131,6 +133,15 @@ fun AppNavigation(sessionManager: SessionManager) {
                     }
                 )
             }
+
+            composable("map") {
+                BranchMapScreen(
+                    address = "Jln. Patih Jelantik No.102, Gianyar",
+                    branchName = "Cabang Utama EZ Drive",
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
     }
 }
+

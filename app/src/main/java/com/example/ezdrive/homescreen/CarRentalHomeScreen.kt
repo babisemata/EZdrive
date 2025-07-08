@@ -1,6 +1,8 @@
 package com.example.ezdrive.homescreen
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,6 +79,7 @@ fun CarRentalHomeScreen(
     onNavigate: (String) -> Unit,
     onCarClicked: (CarItem) -> Unit,
     onProfile: () -> Unit
+
 ) {
     var selectedCategory by remember { mutableStateOf<CarCategory?>(null) }
 
@@ -104,7 +108,9 @@ fun CarRentalHomeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            item { LocationAndDateCard() }
+            item { LocationAndDateCard(
+                onMapClick = { onNavigate("map") }
+            ) }
 
             item {
                 CarCategoriesSection(
@@ -123,7 +129,7 @@ fun CarRentalHomeScreen(
                 val title = when (selectedCategory?.id) {
                     "popular" -> "Pilihan Populer"
                     "all", null -> "Semua Mobil"
-                    else -> "Mobil ${selectedCategory?.name}"
+                    else -> "Mobil ${'$'}{selectedCategory?.name}"
                 }
 
                 FeaturedCarsSection(
@@ -148,11 +154,50 @@ fun SectionTitle(text: String) {
 }
 
 @Composable
-fun LocationAndDateCard() {
+fun LocationAndDateCard(
+    onMapClick: () -> Unit
+) {
+    val context = LocalContext.current
+
+    // State tanggal (tetap sama)
     val today = LocalDate.now()
     val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
     var selectedDate by remember { mutableStateOf(today) }
 
+    // State dialog & lokasi
+    var showLocationDialog by remember { mutableStateOf(false) }
+    var pickupLocation by remember { mutableStateOf("Cabang Utama") }
+
+    // Koordinat Cabang Utama di Gianyar (Jln. Patih Jelantik No.102)
+    val lat = -8.5141    // ganti dengan latitude akurat
+    val lng = 115.2628   // ganti dengan longitude akurat
+    val label = Uri.encode("EZ Drive Cabang Utama")
+
+    // Dialog Pilih Lokasi
+    if (showLocationDialog) {
+        AlertDialog(
+            onDismissRequest = { showLocationDialog = false },
+            title = { Text("Pilih Lokasi") },
+            text = {
+                Column {
+                    TextButton(onClick = {
+                        pickupLocation = "Cabang Utama"
+                        showLocationDialog = false
+                        onMapClick()
+                    }) {
+                        Text("Cabang Utama")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLocationDialog = false }) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
+
+    // UI Card
     Card(
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth()
@@ -163,21 +208,22 @@ fun LocationAndDateCard() {
         ) {
             Text("Mau sewa mobil dimana?", fontWeight = FontWeight.Bold)
 
+            // Bar lokasi (buka dialog)
             Row(
-                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { /* TODO: location picker */ }
+                    .clickable { showLocationDialog = true }
                     .padding(vertical = 8.dp)
-            ) {
+            )  {
                 Icon(Icons.Outlined.LocationOn, contentDescription = null)
                 Spacer(Modifier.width(12.dp))
-                Text("Pilih Lokasi Penjemputan", Modifier.weight(1f))
-                Icon(Icons.Filled.ArrowForwardIos, null, Modifier.size(16.dp))
+                Text(pickupLocation, Modifier.weight(1f))
+                Icon(Icons.Filled.ArrowForwardIos, contentDescription = null, Modifier.size(16.dp))
             }
 
             Divider()
 
+            // Bar tanggal (tetap sama)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -188,11 +234,13 @@ fun LocationAndDateCard() {
                 Icon(Icons.Outlined.DateRange, contentDescription = null)
                 Spacer(Modifier.width(12.dp))
                 Text(selectedDate.format(dateFormatter), Modifier.weight(1f))
-                Icon(Icons.Filled.ArrowForwardIos, null, Modifier.size(16.dp))
+                Icon(Icons.Filled.ArrowForwardIos, contentDescription = null, Modifier.size(16.dp))
             }
         }
     }
 }
+
+
 
 @Composable
 fun CarCategoriesSection(
@@ -267,9 +315,9 @@ fun FeaturedCarsSection(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Filled.Star, contentDescription = null, tint = Color(0xFFFFD700))
                                 Spacer(Modifier.width(4.dp))
-                                Text("${car.rating}", style = MaterialTheme.typography.bodySmall)
+                                Text("${'$'}{car.rating}", style = MaterialTheme.typography.bodySmall)
                                 Spacer(Modifier.weight(1f))
-                                Text("${car.seats} seats", style = MaterialTheme.typography.bodySmall)
+                                Text("${'$'}{car.seats} seats", style = MaterialTheme.typography.bodySmall)
                             }
                             Spacer(Modifier.height(4.dp))
                             Text(car.transmission, style = MaterialTheme.typography.bodySmall)
