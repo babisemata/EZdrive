@@ -22,6 +22,7 @@ import com.example.ezdrive.service.SessionManager
 import com.example.ezdrive.service.handleLogin
 import com.example.ezdrive.service.handleRegister
 import com.example.ezdrive.screens.SewaScreen
+import com.example.ezdrive.search.SearchScreen
 
 @Composable
 fun AppNavigation(sessionManager: SessionManager) {
@@ -131,6 +132,15 @@ fun AppNavigation(sessionManager: SessionManager) {
                     }
                 )
             }
+            composable("search") {
+                SearchScreen (
+                    onBack = { navController.popBackStack() },
+                    onCarClicked = { car ->
+                        // Arahkan ke detail atau lakukan sesuatu
+                    }
+                )
+            }
+
         }
     }
 }
