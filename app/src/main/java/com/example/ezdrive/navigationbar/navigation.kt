@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.ezdrive.homescreen.CarRentalHomeScreen
 import com.example.ezdrive.loginpage.LoginScreen
 import com.example.ezdrive.loginpage.RegisterScreen
+import com.example.ezdrive.maps.BranchMapScreen
 import com.example.ezdrive.navigationbar.BottomNavigationPane
 import com.example.ezdrive.navigationbar.NavItem
 import com.example.ezdrive.profile.ProfileScreen
@@ -129,6 +130,14 @@ fun AppNavigation(sessionManager: SessionManager) {
                             launchSingleTop = true
                         }
                     }
+                )
+            }
+
+            composable("map") {
+                BranchMapScreen(
+                    address = "Jln. Patih Jelantik No.102, Gianyar",
+                    branchName = "Cabang Utama EZ Drive",
+                    onBack = { navController.popBackStack() }
                 )
             }
         }
