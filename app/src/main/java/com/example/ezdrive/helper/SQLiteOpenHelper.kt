@@ -208,19 +208,26 @@ class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", nul
 
     // --- FUNGSI UNTUK MOBIL ---
 
+    // Di dalam kelas DBHelper
     fun addBooking(booking: Booking): Boolean {
         val db = this.writableDatabase
-        val values = ContentValues().apply {
-            put("userId", booking.userId)
-            put("carId", booking.carId)
-            put("carName", booking.carName)
-            put("carImage", booking.carImage)
-            put("startDate", booking.startDate)
-            put("endDate", booking.endDate)
-            put("totalPrice", booking.totalPrice)
-            put("status", booking.status)
-        }
+        val values = ContentValues()
+
+        // Masukkan semua data dari objek booking ke ContentValues
+        values.put("userId", booking.userId)
+        values.put("carId", booking.carId)
+        values.put("carName", booking.carName)
+        values.put("carImage", booking.carImage)
+        values.put("startDate", booking.startDate)
+        values.put("endDate", booking.endDate)
+        values.put("totalPrice", booking.totalPrice)
+        values.put("status", booking.status)
+
+        // db.insert akan mengembalikan -1 jika terjadi error.
+        // Jika tidak error, ia akan mengembalikan ID baris baru.
         val result = db.insert("Booking", null, values)
+
+        // Kembalikan 'true' jika result BUKAN -1
         return result != -1L
     }
 

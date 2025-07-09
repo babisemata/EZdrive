@@ -87,31 +87,51 @@ fun BookingScreen(
                     // Tombol hanya aktif jika semua data sudah siap
                     enabled = selectedStartDate != null && selectedEndDate != null && car != null && selectedEndDate!! > selectedStartDate!!,
                     onClick = {
-                        scope.launch {
-                            val currentCar = car ?: return@launch // Keluar jika car null
+                        scope.launch { // Menjalankan di background thread, ini sudah bagus
 
                             sessionManager.getUserEmail()?.let { email ->
+                                Toast.makeText(context, "Email ditemukan: $email", Toast.LENGTH_SHORT).show()
+
                                 val userId = dbHelper.getUserIdByEmail(email)
+
                                 if (userId != -1) {
-                                    val newBooking = Booking(
-                                        bookingId = 0,
-                                        userId = userId,
-                                        carId = currentCar.carid,
-                                        carName = "${currentCar.merk ?: ""} ${currentCar.model ?: ""}",
-                                        carImage = currentCar.foto ?: ByteArray(0),
-                                        startDate = convertMillisToDateString(selectedStartDate!!, "yyyy-MM-dd"),
-                                        endDate = convertMillisToDateString(selectedEndDate!!, "yyyy-MM-dd"),
-                                        totalPrice = totalPrice,
-                                        status = "Confirmed"
-                                    )
-                                    if (dbHelper.addBooking(newBooking)) {
-                                        Toast.makeText(context, "Booking berhasil!", Toast.LENGTH_SHORT).show()
-                                        onBookingSuccess()
+                                    Toast.makeText(context, "User ID ditemukan: $userId", Toast.LENGTH_SHORT).show()
+                                    val currentCar = car // Buat variabel lokal yang aman
+
+                                    if (currentCar != null) {
+                                        val newBooking = Booking(
+                                            bookingId = 0,
+                                            userId = userId,
+                                            carId = currentCar.carid,
+                                            carName = "${currentCar.merk ?: ""} ${currentCar.model ?: ""}",
+                                            carImage = currentCar.foto ?: ByteArray(0),
+                                            startDate = convertMillisToDateString(selectedStartDate!!, "yyyy-MM-dd"),
+                                            endDate = convertMillisToDateString(selectedEndDate!!, "yyyy-MM-dd"),
+                                            totalPrice = totalPrice,
+                                            status = "Confirmed"
+                                        )
+
+                                        Toast.makeText(context, "Mencoba menyimpan booking...", Toast.LENGTH_SHORT).show()
+
+                                        // Panggil fungsi addBooking dari DBHelper
+                                        val isSuccess = dbHelper.addBooking(newBooking)
+
+                                        if (isSuccess) {
+                                            Toast.makeText(context, "Booking BERHASIL disimpan!", Toast.LENGTH_SHORT).show()
+                                            onBookingSuccess()
+                                        } else {
+                                            // INI KEMUNGKINAN BESAR MASALAHNYA
+                                            Toast.makeText(context, "Gagal menyimpan ke DB.", Toast.LENGTH_LONG).show()
+                                        }
                                     } else {
-                                        Toast.makeText(context, "Gagal melakukan booking.", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Data mobil null saat mau booking.", Toast.LENGTH_SHORT).show()
                                     }
+                                } else {
+                                    Toast.makeText(context, "User ID tidak ditemukan untuk email: $email", Toast.LENGTH_LONG).show()
                                 }
-                            } ?: Toast.makeText(context, "Sesi tidak ditemukan.", Toast.LENGTH_SHORT).show()
+                            } ?: run {
+                                Toast.makeText(context, "Sesi tidak ditemukan. Tidak bisa booking.", Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
                 ) {

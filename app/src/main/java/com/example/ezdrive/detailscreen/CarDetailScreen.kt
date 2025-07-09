@@ -30,7 +30,7 @@ import java.util.Locale
 fun CarDetailScreen(
     car: Car, // Terima seluruh objek Car
     onBack: () -> Unit,
-    onBooking: (Car) -> Unit // Ganti nama callback agar konsisten
+    onBooking: () -> Unit // Ganti nama callback agar konsisten
 ) {
     // Format harga ke Rupiah
     val formatRupiah = NumberFormat.getCurrencyInstance(Locale("in", "ID"))
@@ -48,14 +48,30 @@ fun CarDetailScreen(
             )
         },
         bottomBar = {
-            Button(
-                enabled = car.isAvailable,
-                onClick = { onBooking(car) }, // Panggil onBooking dengan objek Car
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
+            BottomAppBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Text(if (car.isAvailable) "Sewa Sekarang" else "Telah Disewa")
+                // Bagian Kiri: Menampilkan Harga
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Harga per hari", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text = formattedPrice, // Asumsi variabel ini ada
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                // Bagian Kanan: Tombol Aksi
+                Button(
+                    enabled = car.isAvailable,
+                    onClick = onBooking
+                ) {
+                    Text(if (car.isAvailable) "Sewa Sekarang" else "Telah Disewa")
+                }
             }
         }
     ) { innerPadding ->

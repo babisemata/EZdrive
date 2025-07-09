@@ -141,14 +141,8 @@ fun AppNavigation(sessionManager: SessionManager) {
                     profilePicture = user?.profilePicture,
 
                     onNavigate = { route -> navController.navigate(route) },
-                    onCarClicked = { selectedCarItem ->
-                        // PASTIKAN BAGIAN INI BENAR:
-                        // 1. Simpan seluruh objek Car ke SavedStateHandle
-                        navController.currentBackStackEntry
-                            ?.savedStateHandle?.set("car", selectedCarItem.carFromDb)
-
-                        // 2. Navigasi ke rute "car_detail" TANPA ID
-                        navController.navigate("car_detail")
+                    onCarClicked = { selectedCar ->
+                        navController.navigate("car_detail/${selectedCar.carFromDb.carid}")
                     },
                     onProfile = { navController.navigate(NavItem.Profile.route) }
                 )
@@ -349,29 +343,28 @@ fun AppNavigation(sessionManager: SessionManager) {
                 }
             }
 
-
-
-            // Di dalam NavHost di AppNavigation.kt
-            composable("car_detail") {
-                val car = navController.previousBackStackEntry
-                    ?.savedStateHandle?.get<Car>("car")
-
-                if (car != null) {
-                    CarDetailScreen(
-                        car = car,
-                        onBack = { navController.popBackStack() },
-                        onBooking = { selectedCar ->
-                            // --- TAMBAHKAN TOAST DI SINI ---
-                            Toast.makeText(context, "Tombol Booking Ditekan! ID Mobil: ${selectedCar.carid}", Toast.LENGTH_SHORT).show()
-
-                            // Navigasi ke halaman booking
-                            navController.navigate("booking/${selectedCar.carid}")
-                        }
-                    )
-                } else {
+            // Di dalam NavHost
+            composable(
+                route = "car_detail/{carId}",
+                arguments = listOf(navArgument("carId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val carId = backStackEntry.arguments?.getInt("carId") ?: return@composable
+                val dbHelper = remember { DBHelper(context) }
+                val car = remember { dbHelper.getCarById(carId) } ?: run {
                     navController.popBackStack()
+                    return@composable
                 }
+
+                CarDetailScreen(
+                    car = car,
+                    onBack = { navController.popBackStack() },
+                    onBooking = {
+                        // sekali lagi, cukup pass ID
+                        navController.navigate("booking/$carId")
+                    }
+                )
             }
+
 
             composable(
                 route = "booking/{carId}",
