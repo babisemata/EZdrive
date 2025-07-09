@@ -59,6 +59,7 @@ fun ProfileScreen(
             ProfileItem(label = "Email account", value = userEmail)
             ProfileItem(label = "Mobile number", value = userPhone ?: "Add number")
             ProfileItem(label = "Location", value = userLocation)
+            ProfileItem(label = "Role", value = userRole)
 
             Spacer(modifier = Modifier.height(32.dp))
             Button(

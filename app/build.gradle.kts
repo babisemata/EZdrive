@@ -127,5 +127,5 @@ dependencies {
     implementation ("com.google.maps.android:maps-compose:2.11.2")
     implementation ("org.osmdroid:osmdroid-android:6.1.10")
     implementation ("androidx.preference:preference-ktx:1.2.1")
-
+    implementation("io.coil-kt:coil-compose:2.6.0")
 }

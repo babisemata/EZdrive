@@ -31,17 +31,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.ezdrive.R
+import com.example.ezdrive.helper.DBHelper
+import com.example.ezdrive.model.Car
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.text.NumberFormat
+import java.util.Locale
 
 // --- DATA MODELS ---
 data class CarItem(
-    val id: Int,
+    val carFromDb: Car,
     val name: String,
     val type: String,
     val pricePerDay: String,
-    val imageUrl: Int,
+    val imageData: ByteArray,
     val rating: Float,
     val seats: Int,
     val transmission: String
@@ -53,6 +58,22 @@ data class CarCategory(
     val icon: ImageVector
 )
 
+fun Car.toCarItem(): CarItem {
+    val formatRupiah = NumberFormat.getCurrencyInstance(Locale("in", "ID"))
+    val formattedPrice = formatRupiah.format(this.hargaPerHari).replace(",00", "")
+
+    return CarItem(
+        carFromDb = this,
+        name = "${this.merk} ${this.model}",
+        type = this.category,
+        pricePerDay = "$formattedPrice/hari",
+        imageData = this.foto,
+        rating = 4.5f,
+        seats = this.kapasitas,
+        transmission = this.transmission
+    )
+}
+
 // --- DUMMY DATA ---
 private val carCategories = listOf(
     CarCategory("all", "Semua", Icons.Filled.DirectionsCar),
@@ -63,14 +84,6 @@ private val carCategories = listOf(
     CarCategory("hatchback", "Hatchback", Icons.Filled.ElectricCar)
 )
 
-private val featuredCars = listOf(
-    CarItem(1, "Toyota Avanza", "MPV", "Rp 350.000", R.drawable.img_car_avanza, 4.5f, 7, "Manual"),
-    CarItem(2, "Honda HR-V", "SUV", "Rp 550.000", R.drawable.img_car_hrv, 4.8f, 5, "Automatic"),
-    CarItem(3, "Suzuki Ertiga", "MPV", "Rp 300.000", R.drawable.img_car_ertiga, 4.3f, 7, "Manual"),
-    CarItem(4, "Mitsubishi Xpander", "MPV", "Rp 400.000", R.drawable.img_car_xpander, 4.6f, 7, "Automatic"),
-    CarItem(5, "Daihatsu Terios", "SUV", "Rp 450.000", R.drawable.img_car_terios, 4.4f, 7, "Manual"),
-    CarItem(6, "Honda Brio", "Hatchback", "Rp 250.000", R.drawable.img_car_brio, 4.2f, 5, "Automatic")
-)
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,6 +94,13 @@ fun CarRentalHomeScreen(
     onProfile: () -> Unit
 
 ) {
+    val context = LocalContext.current
+    var carList by remember { mutableStateOf<List<CarItem>>(emptyList()) }
+    val dbHelper = remember { DBHelper(context) }
+    LaunchedEffect(Unit) {
+        val carsFromDb = dbHelper.getAllCars()
+        carList = carsFromDb.map { it.toCarItem() }
+    }
     var selectedCategory by remember { mutableStateOf<CarCategory?>(null) }
 
     Scaffold(
@@ -122,20 +142,9 @@ fun CarRentalHomeScreen(
             }
 
             item {
-                val filteredCars = when (selectedCategory?.id) {
-                    "popular" -> featuredCars.sortedByDescending { it.rating }
-                    "all", null -> featuredCars
-                    else -> featuredCars.filter { it.type.equals(selectedCategory?.name, ignoreCase = true) }
-                }
-                val title = when (selectedCategory?.id) {
-                    "popular" -> "Pilihan Populer"
-                    "all", null -> "Semua Mobil"
-                    else -> "Mobil ${'$'}{selectedCategory?.name}"
-                }
-
                 FeaturedCarsSection(
-                    title = title,
-                    cars = filteredCars,
+                    title = "Semua Mobil",
+                    cars = carList, // Gunakan carList dari state
                     onCarClicked = onCarClicked
                 )
             }
@@ -284,14 +293,12 @@ fun FeaturedCarsSection(
                         .clickable { onCarClicked(car) }
                 ) {
                     Column {
-                        Image(
-                            painter = painterResource(car.imageUrl),
+                        // Gunakan Coil untuk memuat gambar dari ByteArray (BLOB)
+                        AsyncImage(
+                            model = car.imageData,
                             contentDescription = car.name,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .height(120.dp)
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                            modifier = Modifier.height(120.dp).fillMaxWidth()
                         )
                         Column(Modifier.padding(12.dp)) {
                             Text(car.name, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)

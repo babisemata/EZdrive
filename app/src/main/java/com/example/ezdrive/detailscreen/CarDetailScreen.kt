@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ezdrive.homescreen.CarItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,14 +57,13 @@ fun CarDetailScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Image(
-                painter = painterResource(id = car.imageUrl),
+            AsyncImage(
+                model = car.imageData, // <-- Gunakan imageData yang tipenya ByteArray
                 contentDescription = car.name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
+                    .height(120.dp)
                     .fillMaxWidth()
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(12.dp))
             )
 
             Text(car.name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
