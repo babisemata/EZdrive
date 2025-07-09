@@ -93,7 +93,8 @@ fun AppNavigation(sessionManager: SessionManager) {
                         handleLogin(context, email, password) { success, role ->
                             if (success) {
                                 sessionManager.saveLogin(email, role)
-                                val destination = if (role == "admin") AdminNavItem.Dashboard.route else NavItem.Home.route
+                                val destination =
+                                    if (role == "admin") AdminNavItem.Dashboard.route else NavItem.Home.route
                                 navController.navigate(destination) {
                                     popUpTo("login") { inclusive = true }
                                 }
@@ -123,10 +124,28 @@ fun AppNavigation(sessionManager: SessionManager) {
 
             // --- USER FLOW ---
             composable(NavItem.Home.route) {
+                val dbHelper = remember { DBHelper(context) }
+                var user by remember { mutableStateOf<User?>(null) }
+
+                // LaunchedEffect ini akan berjalan setiap kali Anda kembali ke Home
+                LaunchedEffect(navController.currentBackStackEntry) {
+                    // Ambil data user yang sedang login
+                    sessionManager.getUserEmail()?.let { email ->
+                        user = dbHelper.getUserByEmail(email)
+                    }
+                }
+
                 CarRentalHomeScreen(
+                    // Kirim data gambar ke UI
+                    profilePicture = user?.profilePicture,
+
                     onNavigate = { route -> navController.navigate(route) },
                     onCarClicked = { selectedCar ->
-                        navController.navigate("car_detail/${selectedCar.carFromDb.carid}")
+                        // Anda perlu cara untuk mengirim objek Car ke detail,
+                        // SavedStateHandle adalah cara terbaik
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle?.set("car", selectedCar.carFromDb)
+                        navController.navigate("car_detail")
                     },
                     onProfile = { navController.navigate(NavItem.Profile.route) }
                 )
@@ -238,7 +257,8 @@ fun AppNavigation(sessionManager: SessionManager) {
                             ?.savedStateHandle
                             ?.set("profile_updated", true) // Kuncinya di sini
 
-                        Toast.makeText(context, "Profil berhasil diperbarui", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Profil berhasil diperbarui", Toast.LENGTH_SHORT)
+                            .show()
                         navController.popBackStack()
                     }
                 )
@@ -265,7 +285,10 @@ fun AppNavigation(sessionManager: SessionManager) {
                 AdminAddCarScreen(onCarAdded = { navController.popBackStack() })
             }
 
-            composable("admin_edit_car/{carId}", arguments = listOf(navArgument("carId") { type = NavType.IntType })) { backStackEntry ->
+            composable(
+                "admin_edit_car/{carId}",
+                arguments = listOf(navArgument("carId") { type = NavType.IntType })
+            ) { backStackEntry ->
                 val carId = backStackEntry.arguments?.getInt("carId") ?: 0
                 AdminEditCarScreen(
                     carId = carId,
@@ -278,33 +301,46 @@ fun AppNavigation(sessionManager: SessionManager) {
                 val dbHelper = remember { DBHelper(context) }
                 var adminUser by remember { mutableStateOf<User?>(null) }
 
-                // LaunchedEffect akan dijalankan lagi saat Anda kembali dari halaman edit,
-                // sehingga data (termasuk foto baru) akan otomatis diperbarui.
-                LaunchedEffect(navController.currentBackStackEntry) {
+                // Menangkap sinyal dari halaman edit untuk refresh
+                val profileUpdated = navController.currentBackStackEntry
+                    ?.savedStateHandle
+                    ?.getLiveData<Boolean>("profile_updated")
+                    ?.observeAsState()
+
+                // LaunchedEffect akan mengambil data terbaru saat kembali dari halaman edit
+                LaunchedEffect(profileUpdated?.value) {
                     sessionManager.getUserEmail()?.let { email ->
                         adminUser = dbHelper.getUserByEmail(email)
                     }
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.remove<Boolean>("profile_updated")
                 }
 
-                AdminProfileScreen(
-                    adminEmail = adminUser?.email ?: "...",
-                    onBack = {
-                        navController.navigate(AdminNavItem.Dashboard.route) {
-                            popUpTo(AdminNavItem.Dashboard.route) { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    },
-                    // onEdit sekarang mengarah ke rute baru
-                    onEdit = {
-                        navController.navigate("edit_profile")
-                    },
-                    onLogout = {
-                        sessionManager.clearSession()
-                        navController.navigate("login") {
-                            popUpTo(0) { inclusive = true }
-                        }
+                if (adminUser == null) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
                     }
-                )
+                } else {
+                    AdminProfileScreen(
+                        adminEmail = adminUser!!.email,
+                        // INI BAGIAN PENTING: Kirim data gambar ke UI
+                        profilePicture = adminUser!!.profilePicture,
+                        onBack = {
+                            navController.navigate(AdminNavItem.Dashboard.route) {
+                                popUpTo(AdminNavItem.Dashboard.route) { inclusive = true }
+                            }
+                        },
+                        onEdit = {
+                            // Arahkan ke halaman edit yang sudah disatukan
+                            navController.navigate("edit_profile")
+                        },
+                        onLogout = {
+                            sessionManager.clearSession()
+                            navController.navigate("login") { popUpTo(0) { inclusive = true } }
+                        }
+                    )
+                }
             }
 
 

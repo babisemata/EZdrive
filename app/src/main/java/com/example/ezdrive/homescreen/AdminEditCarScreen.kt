@@ -53,13 +53,14 @@ fun AdminEditCarScreen(
     LaunchedEffect(carId) {
         val car = dbHelper.getCarById(carId)
         if (car != null) {
-            merk = car.merk
-            model = car.model
-            tahun = car.tahun.toString()
-            kapasitas = car.kapasitas.toString()
-            hargaPerHari = car.hargaPerHari.toString()
-            category = car.category
-            transmission = car.transmission
+            // Gunakan operator Elvis (?:) untuk memberikan nilai default "" jika data null
+            merk = car.merk ?: ""
+            model = car.model ?: ""
+            tahun = car.tahun?.toString() ?: ""
+            kapasitas = car.kapasitas?.toString() ?: ""
+            hargaPerHari = car.hargaPerHari?.toString() ?: ""
+            category = car.category ?: ""
+            transmission = car.transmission ?: ""
             isAvailable = car.isAvailable
             existingImage = car.foto
         }

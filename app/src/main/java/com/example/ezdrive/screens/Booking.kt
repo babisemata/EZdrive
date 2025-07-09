@@ -68,7 +68,8 @@ fun BookingScreen(
         if (selectedStartDate != null && selectedEndDate != null && car != null) {
             val days = TimeUnit.MILLISECONDS.toDays(selectedEndDate!! - selectedStartDate!!)
             if (days >= 0) {
-                totalPrice = (days + 1) * car!!.hargaPerHari
+                // Gunakan operator elvis (?:) untuk memberi nilai default
+                totalPrice = (days + 1) * (car!!.hargaPerHari ?: 0.0)
             }
         }
     }
@@ -105,11 +106,16 @@ fun BookingScreen(
                             val userId = dbHelper.getUserIdByEmail(sessionManager.getUserEmail()!!)
                             if (userId != -1 && car != null) {
                                 val newBooking = Booking(
-                                    bookingId = 0, userId = userId, carId = car!!.carid,
-                                    carName = "${car!!.merk} ${car!!.model}", carImage = car!!.foto,
+                                    bookingId = 0,
+                                    userId = userId,
+                                    carId = car!!.carid,
+                                    carName = "${car!!.merk} ${car!!.model}",
+                                    // Gunakan operator elvis (?:) untuk memberi nilai default
+                                    carImage = car!!.foto ?: ByteArray(0),
                                     startDate = convertMillisToDateString(selectedStartDate!!, "yyyy-MM-dd"),
                                     endDate = convertMillisToDateString(selectedEndDate!!, "yyyy-MM-dd"),
-                                    totalPrice = totalPrice, status = "Confirmed"
+                                    totalPrice = totalPrice,
+                                    status = "Confirmed"
                                 )
                                 if (dbHelper.addBooking(newBooking)) {
                                     Toast.makeText(context, "Booking berhasil!", Toast.LENGTH_SHORT).show()

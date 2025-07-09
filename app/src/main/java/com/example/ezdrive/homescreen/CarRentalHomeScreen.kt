@@ -1,9 +1,7 @@
 package com.example.ezdrive.homescreen
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,7 +12,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
@@ -23,24 +20,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.ezdrive.R
 import com.example.ezdrive.helper.DBHelper
 import com.example.ezdrive.model.Car
+import com.example.ezdrive.model.CarCategory // <-- IMPORT YANG BENAR
+import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.text.NumberFormat
 import java.util.Locale
 
-// --- DATA MODELS ---
+// --- DATA MODELS (HANYA CarItem) ---
 data class CarItem(
     val carFromDb: Car,
     val name: String,
@@ -52,56 +47,59 @@ data class CarItem(
     val transmission: String
 )
 
-data class CarCategory(
-    val id: String,
-    val name: String,
-    val icon: ImageVector
-)
+// data class CarCategory dihapus dari sini
 
+// --- FUNGSI KONVERSI YANG DIPERBAIKI ---
 fun Car.toCarItem(): CarItem {
     val formatRupiah = NumberFormat.getCurrencyInstance(Locale("in", "ID"))
-    val formattedPrice = formatRupiah.format(this.hargaPerHari).replace(",00", "")
+    val formattedPrice = formatRupiah.format(this.hargaPerHari ?: 0.0).replace(",00", "")
 
     return CarItem(
         carFromDb = this,
-        name = "${this.merk} ${this.model}",
-        type = this.category,
+        name = "${this.merk ?: ""} ${this.model ?: ""}",
+        type = this.category ?: "N/A", // Beri nilai default jika null
         pricePerDay = "$formattedPrice/hari",
-        imageData = this.foto,
-        rating = 4.5f,
-        seats = this.kapasitas,
-        transmission = this.transmission
+        imageData = this.foto ?: ByteArray(0), // Beri ByteArray kosong jika null
+        rating = 4.5f, // Rating sementara
+        seats = this.kapasitas ?: 0, // Beri nilai default jika null
+        transmission = this.transmission ?: "N/A" // Beri nilai default jika null
     )
 }
-
-// --- DUMMY DATA ---
-private val carCategories = listOf(
-    CarCategory("all", "Semua", Icons.Filled.DirectionsCar),
-    CarCategory("popular", "Populer", Icons.Filled.Star),
-    CarCategory("suv", "SUV", Icons.Filled.DirectionsCar),
-    CarCategory("sedan", "Sedan", Icons.Filled.DriveEta),
-    CarCategory("mpv", "MPV", Icons.Filled.DirectionsBus),
-    CarCategory("hatchback", "Hatchback", Icons.Filled.ElectricCar)
-)
 
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarRentalHomeScreen(
+    profilePicture: ByteArray?,
     onNavigate: (String) -> Unit,
     onCarClicked: (CarItem) -> Unit,
     onProfile: () -> Unit
-
 ) {
     val context = LocalContext.current
-    var carList by remember { mutableStateOf<List<CarItem>>(emptyList()) }
     val dbHelper = remember { DBHelper(context) }
+
+    var allCars by remember { mutableStateOf<List<CarItem>>(emptyList()) }
+    var categories by remember { mutableStateOf<List<CarCategory>>(emptyList()) }
+    var selectedCategory by remember { mutableStateOf<CarCategory?>(null) }
+
     LaunchedEffect(Unit) {
         val carsFromDb = dbHelper.getAllCars()
-        carList = carsFromDb.map { it.toCarItem() }
+        allCars = carsFromDb.map { it.toCarItem() }
+
+        categories = dbHelper.getAllCategories()
+        selectedCategory = categories.find { it.id == "all" }
     }
-    var selectedCategory by remember { mutableStateOf<CarCategory?>(null) }
+
+    val filteredCars = remember(allCars, selectedCategory) {
+        if (selectedCategory == null || selectedCategory?.id == "all") {
+            allCars
+        } else {
+            allCars.filter { car ->
+                car.type.equals(selectedCategory?.name, ignoreCase = true)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -111,12 +109,21 @@ fun CarRentalHomeScreen(
                     IconButton(onClick = { onNavigate("search") }) {
                         Icon(Icons.Filled.Search, contentDescription = "Cari Mobil")
                     }
-
-                    IconButton(onClick = { /* notifications */ }) {
-                        Icon(Icons.Outlined.Notifications, contentDescription = "Notifikasi")
-                    }
                     IconButton(onClick = onProfile) {
-                        Icon(Icons.Filled.Person, contentDescription = "Profile")
+                        // Jika ada data gambar, tampilkan AsyncImage
+                        if (profilePicture != null) {
+                            AsyncImage(
+                                model = profilePicture,
+                                contentDescription = "Profile",
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            // Jika tidak ada, tampilkan ikon default
+                            Icon(Icons.Filled.Person, contentDescription = "Profile")
+                        }
                     }
                 }
             )
@@ -126,25 +133,23 @@ fun CarRentalHomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            item { LocationAndDateCard(
-                onMapClick = { onNavigate("map") }
-            ) }
+            item { LocationAndDateCard(onMapClick = { onNavigate("map") }) }
 
             item {
                 CarCategoriesSection(
-                    categories = carCategories,
+                    categories = categories,
                     selectedCategory = selectedCategory,
-                    onCategorySelected = { selectedCategory = it }
+                    onCategorySelected = { category -> selectedCategory = category }
                 )
             }
 
             item {
                 FeaturedCarsSection(
-                    title = "Semua Mobil",
-                    cars = carList, // Gunakan carList dari state
+                    title = selectedCategory?.name ?: "Semua Mobil",
+                    cars = filteredCars,
                     onCarClicked = onCarClicked
                 )
             }

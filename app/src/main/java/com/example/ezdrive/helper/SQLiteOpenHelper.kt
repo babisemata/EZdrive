@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.DriveEta
 import androidx.compose.material.icons.filled.ElectricCar
 import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.ezdrive.model.Alamat
@@ -132,7 +134,7 @@ class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", nul
     private fun seedCategories(db: SQLiteDatabase) {
         val initialCategories = listOf(
             CarCategory("all", "Semua", Icons.Filled.DirectionsCar),
-            CarCategory("popular", "Populer", Icons.Filled.Star),
+            CarCategory("supercar", "Supercar", Icons.Filled.Speed),
             CarCategory("suv", "SUV", Icons.Filled.DirectionsCar),
             CarCategory("sedan", "Sedan", Icons.Filled.DriveEta),
             CarCategory("mpv", "MPV", Icons.Filled.DirectionsBus),
@@ -393,6 +395,7 @@ class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", nul
     }
 
 
+
     @SuppressLint("Range")
     fun getUserByEmail(email: String): User? {
         val db = readableDatabase
@@ -494,21 +497,41 @@ class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", nul
 
     @SuppressLint("Range")
     fun getAllCategories(): List<CarCategory> {
+        // 1. Siapkan list kosong untuk menampung hasil
         val categoryList = mutableListOf<CarCategory>()
+
+        // 2. Dapatkan database yang bisa dibaca
         val db = this.readableDatabase
+
+        // 3. Jalankan query untuk mengambil semua data dari tabel CarCategory
         val cursor = db.rawQuery("SELECT * FROM CarCategory", null)
 
+        // 4. Lakukan loop untuk setiap baris data yang ditemukan
         if (cursor.moveToFirst()) {
             do {
+                // Ambil data dari setiap kolom
+                val id = cursor.getString(cursor.getColumnIndex("id"))
+                val name = cursor.getString(cursor.getColumnIndex("name"))
+                val iconName = cursor.getString(cursor.getColumnIndex("iconName"))
+
+                // Buat objek CarCategory
                 val category = CarCategory(
-                    id = cursor.getString(cursor.getColumnIndex("id")),
-                    name = cursor.getString(cursor.getColumnIndex("name")),
-                    icon = mapIconNameToVector(cursor.getString(cursor.getColumnIndex("iconName")))
+                    id = id,
+                    name = name,
+                    // Gunakan fungsi mapIconNameToVector yang sudah ada untuk mengubah String menjadi ImageVector
+                    icon = mapIconNameToVector(iconName)
                 )
+
+                // Tambahkan objek ke dalam list
                 categoryList.add(category)
+
             } while (cursor.moveToNext())
         }
+
+        // 5. Tutup cursor untuk menghindari memory leak
         cursor.close()
+
+        // 6. Kembalikan list yang sudah terisi
         return categoryList
     }
 
