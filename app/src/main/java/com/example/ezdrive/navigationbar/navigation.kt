@@ -24,6 +24,7 @@ import com.example.ezdrive.homescreen.CarRentalHomeScreen
 import com.example.ezdrive.loginpage.LoginScreen
 import com.example.ezdrive.loginpage.RegisterScreen
 import com.example.ezdrive.maps.BranchMapScreen
+import com.example.ezdrive.model.Car
 import com.example.ezdrive.model.User
 import com.example.ezdrive.navigationbar.AdminBottomNavigationPane
 import com.example.ezdrive.navigationbar.AdminNavItem
@@ -140,11 +141,13 @@ fun AppNavigation(sessionManager: SessionManager) {
                     profilePicture = user?.profilePicture,
 
                     onNavigate = { route -> navController.navigate(route) },
-                    onCarClicked = { selectedCar ->
-                        // Anda perlu cara untuk mengirim objek Car ke detail,
-                        // SavedStateHandle adalah cara terbaik
+                    onCarClicked = { selectedCarItem ->
+                        // PASTIKAN BAGIAN INI BENAR:
+                        // 1. Simpan seluruh objek Car ke SavedStateHandle
                         navController.currentBackStackEntry
-                            ?.savedStateHandle?.set("car", selectedCar.carFromDb)
+                            ?.savedStateHandle?.set("car", selectedCarItem.carFromDb)
+
+                        // 2. Navigasi ke rute "car_detail" TANPA ID
                         navController.navigate("car_detail")
                     },
                     onProfile = { navController.navigate(NavItem.Profile.route) }
@@ -268,7 +271,10 @@ fun AppNavigation(sessionManager: SessionManager) {
                 fiturpencarian(
                     onBack = { navController.popBackStack() },
                     onCarClicked = { car ->
-                        navController.navigate("car_detail/${car.carFromDb.carid}")
+                        // UBAH BAGIAN INI AGAR SAMA SEPERTI DI HOME
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle?.set("car", car.carFromDb)
+                        navController.navigate("car_detail")
                     }
                 )
             }
@@ -345,19 +351,26 @@ fun AppNavigation(sessionManager: SessionManager) {
 
 
 
-            // --- COMMON SCREENS (Detail, Booking, Map) ---
-            composable(
-                route = "car_detail/{carId}",
-                arguments = listOf(navArgument("carId") { type = NavType.IntType })
-            ) { backStackEntry ->
-                val carId = backStackEntry.arguments?.getInt("carId") ?: 0
-                CarDetailScreen(
-                    carId = carId,
-                    onBack = { navController.popBackStack() },
-                    onRentNow = { carItem ->
-                        navController.navigate("booking/${carItem.carFromDb.carid}")
-                    }
-                )
+            // Di dalam NavHost di AppNavigation.kt
+            composable("car_detail") {
+                val car = navController.previousBackStackEntry
+                    ?.savedStateHandle?.get<Car>("car")
+
+                if (car != null) {
+                    CarDetailScreen(
+                        car = car,
+                        onBack = { navController.popBackStack() },
+                        onBooking = { selectedCar ->
+                            // --- TAMBAHKAN TOAST DI SINI ---
+                            Toast.makeText(context, "Tombol Booking Ditekan! ID Mobil: ${selectedCar.carid}", Toast.LENGTH_SHORT).show()
+
+                            // Navigasi ke halaman booking
+                            navController.navigate("booking/${selectedCar.carid}")
+                        }
+                    )
+                } else {
+                    navController.popBackStack()
+                }
             }
 
             composable(

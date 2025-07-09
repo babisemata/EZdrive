@@ -2,42 +2,39 @@ package com.example.ezdrive.detailscreen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Chair
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.WbAuto
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.ezdrive.helper.DBHelper
-import com.example.ezdrive.homescreen.CarItem
-import com.example.ezdrive.homescreen.toCarItem
+import com.example.ezdrive.model.Car
+import java.text.NumberFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarDetailScreen(
-    carId: Int,
+    car: Car, // Terima seluruh objek Car
     onBack: () -> Unit,
-    onRentNow: (CarItem) -> Unit
+    onBooking: (Car) -> Unit // Ganti nama callback agar konsisten
 ) {
-    val context = LocalContext.current
-    val dbHelper = remember { DBHelper(context) }
-    var carItem by remember { mutableStateOf<CarItem?>(null) }
-
-    LaunchedEffect(carId) {
-        val carFromDb = dbHelper.getCarById(carId)
-        if (carFromDb != null) {
-            carItem = carFromDb.toCarItem()
-        }
-    }
+    // Format harga ke Rupiah
+    val formatRupiah = NumberFormat.getCurrencyInstance(Locale("in", "ID"))
+    val formattedPrice = formatRupiah.format(car.hargaPerHari ?: 0.0).replace(",00", "")
 
     Scaffold(
         topBar = {
@@ -45,88 +42,97 @@ fun CarDetailScreen(
                 title = { Text("Detail Mobil") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Kembali")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 }
             )
         },
         bottomBar = {
-            if (carItem != null) {
-                val isCarAvailable = carItem!!.carFromDb.isAvailable
-                Button(
-                    enabled = isCarAvailable,
-                    onClick = { onRentNow(carItem!!) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Text(if (isCarAvailable) "Sewa Sekarang" else "Telah Disewa")
-                }
+            Button(
+                enabled = car.isAvailable,
+                onClick = { onBooking(car) }, // Panggil onBooking dengan objek Car
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(if (car.isAvailable) "Sewa Sekarang" else "Telah Disewa")
             }
         }
-    ) { padding ->
-        if (carItem == null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    AsyncImage(
-                        model = carItem!!.imageData,
-                        contentDescription = carItem!!.name,
-                        contentScale = ContentScale.Crop,
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Gambar Mobil
+            Box(contentAlignment = Alignment.Center) {
+                AsyncImage(
+                    model = car.foto,
+                    contentDescription = "${car.merk} ${car.model}",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp),
+                    contentScale = ContentScale.Crop
+                )
+                if (!car.isAvailable) {
+                    Box(
                         modifier = Modifier
-                            .height(200.dp)
-                            .fillMaxWidth()
-                    )
-                    if (!carItem!!.carFromDb.isAvailable) {
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .background(Color.Black.copy(alpha = 0.6f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Tidak Tersedia",
-                                color = Color.White,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = 0.6f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Tidak Tersedia", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     }
                 }
+            }
 
-                Text(carItem!!.name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-
-                Text(carItem!!.type, color = Color.Gray)
-
+            // Konten Detail
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Judul dan Rating
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Star, contentDescription = null, tint = Color(0xFFFFD700))
+                    Text(
+                        text = "${car.merk} ${car.model}",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(Icons.Filled.Star, contentDescription = "Rating", tint = Color(0xFFFFC107))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("${carItem!!.rating}", fontSize = 14.sp)
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text("${carItem!!.seats} Kursi", fontSize = 14.sp)
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(carItem!!.transmission, fontSize = 14.sp)
+                    Text("4.5", fontWeight = FontWeight.SemiBold) // Rating sementara
                 }
+
+                // Deskripsi
+                Text(
+                    text = "Mobil ${car.category ?: ""} ini adalah pilihan terbaik untuk perjalanan Anda. Dengan transmisi ${car.transmission ?: "N/A"} dan kapasitas ${car.kapasitas ?: 0} kursi.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray
+                )
 
                 Divider()
 
-                Text("Harga Sewa", fontWeight = FontWeight.SemiBold)
-                Text(
-                    carItem!!.pricePerDay,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                // Spesifikasi
+                Text("Spesifikasi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                    SpecificationItem(icon = Icons.Filled.WbAuto, label = "Transmisi", value = car.transmission ?: "N/A")
+                    SpecificationItem(icon = Icons.Filled.Chair, label = "Kapasitas", value = "${car.kapasitas ?: 0} Kursi")
+                    SpecificationItem(icon = Icons.Filled.CalendarToday, label = "Tahun", value = car.tahun?.toString() ?: "N/A")
+                }
             }
         }
+    }
+}
+
+// Helper Composable untuk item spesifikasi
+@Composable
+private fun SpecificationItem(icon: ImageVector, label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, contentDescription = label, modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(text = label, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        Text(text = value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
     }
 }

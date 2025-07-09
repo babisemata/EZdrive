@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,20 +15,17 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.ezdrive.helper.DBHelper
 import com.example.ezdrive.model.Booking
 import com.example.ezdrive.model.Car
 import com.example.ezdrive.service.SessionManager
 import kotlinx.coroutines.launch
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
-import java.time.Duration
-import java.util.Date
-import java.util.Locale
+import java.util.*
 import java.util.concurrent.TimeUnit
 
-// Helper function untuk konversi tanggal
 private fun convertMillisToDateString(millis: Long, format: String): String {
     val formatter = SimpleDateFormat(format, Locale("id", "ID"))
     return formatter.format(Date(millis))
@@ -46,11 +43,8 @@ fun BookingScreen(
     val sessionManager = remember { SessionManager(context) }
     val scope = rememberCoroutineScope()
 
-    // State untuk data
     var car by remember { mutableStateOf<Car?>(null) }
     var totalPrice by remember { mutableStateOf(0.0) }
-
-    // State untuk DatePicker
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
     val startDatePickerState = rememberDatePickerState()
@@ -58,18 +52,16 @@ fun BookingScreen(
     var selectedStartDate by remember { mutableStateOf<Long?>(null) }
     var selectedEndDate by remember { mutableStateOf<Long?>(null) }
 
-    // Ambil data mobil saat layar dibuka
     LaunchedEffect(carId) {
         car = dbHelper.getCarById(carId)
     }
 
-    // Hitung total harga setiap kali tanggal berubah
-    LaunchedEffect(selectedStartDate, selectedEndDate) {
-        if (selectedStartDate != null && selectedEndDate != null && car != null) {
+    LaunchedEffect(selectedStartDate, selectedEndDate, car) {
+        val currentCar = car
+        if (selectedStartDate != null && selectedEndDate != null && currentCar != null) {
             val days = TimeUnit.MILLISECONDS.toDays(selectedEndDate!! - selectedStartDate!!)
             if (days >= 0) {
-                // Gunakan operator elvis (?:) untuk memberi nilai default
-                totalPrice = (days + 1) * (car!!.hargaPerHari ?: 0.0)
+                totalPrice = (days + 1) * (currentCar.hargaPerHari ?: 0.0)
             }
         }
     }
@@ -78,11 +70,7 @@ fun BookingScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Booking Mobil") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "Kembali")
-                    }
-                }
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali") } }
             )
         },
         bottomBar = {
@@ -92,36 +80,38 @@ fun BookingScreen(
             ) {
                 Column {
                     Text("Total Harga", style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        "Rp ${"%,.0f".format(totalPrice)}",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Rp ${NumberFormat.getNumberInstance(Locale("id", "ID")).format(totalPrice)}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 Button(
-                    enabled = selectedStartDate != null && selectedEndDate != null && selectedEndDate!! > selectedStartDate!!,
+                    // Tombol hanya aktif jika semua data sudah siap
+                    enabled = selectedStartDate != null && selectedEndDate != null && car != null && selectedEndDate!! > selectedStartDate!!,
                     onClick = {
                         scope.launch {
-                            val userId = dbHelper.getUserIdByEmail(sessionManager.getUserEmail()!!)
-                            if (userId != -1 && car != null) {
-                                val newBooking = Booking(
-                                    bookingId = 0,
-                                    userId = userId,
-                                    carId = car!!.carid,
-                                    carName = "${car!!.merk} ${car!!.model}",
-                                    // Gunakan operator elvis (?:) untuk memberi nilai default
-                                    carImage = car!!.foto ?: ByteArray(0),
-                                    startDate = convertMillisToDateString(selectedStartDate!!, "yyyy-MM-dd"),
-                                    endDate = convertMillisToDateString(selectedEndDate!!, "yyyy-MM-dd"),
-                                    totalPrice = totalPrice,
-                                    status = "Confirmed"
-                                )
-                                if (dbHelper.addBooking(newBooking)) {
-                                    Toast.makeText(context, "Booking berhasil!", Toast.LENGTH_SHORT).show()
-                                    onBookingSuccess()
+                            val currentCar = car ?: return@launch // Keluar jika car null
+
+                            sessionManager.getUserEmail()?.let { email ->
+                                val userId = dbHelper.getUserIdByEmail(email)
+                                if (userId != -1) {
+                                    val newBooking = Booking(
+                                        bookingId = 0,
+                                        userId = userId,
+                                        carId = currentCar.carid,
+                                        carName = "${currentCar.merk ?: ""} ${currentCar.model ?: ""}",
+                                        carImage = currentCar.foto ?: ByteArray(0),
+                                        startDate = convertMillisToDateString(selectedStartDate!!, "yyyy-MM-dd"),
+                                        endDate = convertMillisToDateString(selectedEndDate!!, "yyyy-MM-dd"),
+                                        totalPrice = totalPrice,
+                                        status = "Confirmed"
+                                    )
+                                    if (dbHelper.addBooking(newBooking)) {
+                                        Toast.makeText(context, "Booking berhasil!", Toast.LENGTH_SHORT).show()
+                                        onBookingSuccess()
+                                    } else {
+                                        Toast.makeText(context, "Gagal melakukan booking.", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
-                            }
+                            } ?: Toast.makeText(context, "Sesi tidak ditemukan.", Toast.LENGTH_SHORT).show()
                         }
                     }
                 ) {
@@ -130,7 +120,8 @@ fun BookingScreen(
             }
         }
     ) { paddingValues ->
-        if (car == null) {
+        val currentCar = car
+        if (currentCar == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         } else {
             Column(
@@ -141,25 +132,16 @@ fun BookingScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // --- Detail Mobil ---
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column {
                         AsyncImage(
-                            model = car!!.foto, contentDescription = car!!.merk,
+                            model = currentCar.foto, contentDescription = currentCar.merk,
                             modifier = Modifier.fillMaxWidth().height(180.dp),
                             contentScale = ContentScale.Crop
                         )
                         Column(Modifier.padding(16.dp)) {
-                            Text(
-                                "${car!!.merk} ${car!!.model}",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                "Rp ${"%,.0f".format(car!!.hargaPerHari)} / hari",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            Text("${currentCar.merk} ${currentCar.model}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text("Rp ${NumberFormat.getNumberInstance(Locale("id", "ID")).format(currentCar.hargaPerHari)} / hari", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
