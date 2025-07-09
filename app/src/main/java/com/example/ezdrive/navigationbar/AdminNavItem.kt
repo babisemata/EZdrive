@@ -1,6 +1,7 @@
 package com.example.ezdrive.navigationbar
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Person
@@ -22,5 +23,10 @@ sealed class AdminNavItem(val route: String, val title: String, val icon: ImageV
         "admin_profile",
         "Profil",
         Icons.Filled.Person
+    )
+    object ManageBookings : AdminNavItem(
+        "admin_manage_bookings",
+        "Bookings",
+        Icons.Filled.Bookmarks
     )
 }

@@ -14,8 +14,10 @@ import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.ezdrive.model.Alamat
+import com.example.ezdrive.model.Booking
 import com.example.ezdrive.model.Car
 import com.example.ezdrive.model.CarCategory
+import com.example.ezdrive.model.Payment
 import com.example.ezdrive.model.User
 import java.security.MessageDigest
 
@@ -78,6 +80,22 @@ class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", nul
             """.trimIndent()
         )
 
+        db.execSQL(
+            """
+        CREATE TABLE Booking (
+            bookingId INTEGER PRIMARY KEY AUTOINCREMENT,
+            userId INTEGER,
+            carId INTEGER,
+            carName TEXT,
+            carImage BLOB,
+            startDate TEXT,
+            endDate TEXT,
+            totalPrice REAL,
+            status TEXT
+        )
+        """.trimIndent()
+        )
+
         // TABEL CAR CATEGORY (BARU)
         db.execSQL(
             """
@@ -88,6 +106,22 @@ class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", nul
             )
             """.trimIndent()
         )
+
+
+        db.execSQL(
+                """
+        CREATE TABLE Payment (
+            paymentId INTEGER PRIMARY KEY AUTOINCREMENT,
+            bookingId INTEGER,
+            amount REAL,
+            paymentDate TEXT,
+            status TEXT,
+            FOREIGN KEY(bookingId) REFERENCES Booking(bookingId)
+        )
+        """.trimIndent()
+            )
+
+
         // Menambahkan data kategori awal
         seedCategories(db)
     }
@@ -111,15 +145,180 @@ class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", nul
         }
     }
 
+
+    private fun isTableExists(db: SQLiteDatabase, tableName: String): Boolean {
+        val cursor = db.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+            arrayOf(tableName)
+        )
+        val exists = cursor.count > 0
+        cursor.close()
+        return exists
+    }
+
+
+    override fun onOpen(db: SQLiteDatabase) {
+        super.onOpen(db)
+
+        if (!isTableExists(db, "Booking")) {
+            db.execSQL("""
+            CREATE TABLE Booking (
+                bookingId INTEGER PRIMARY KEY AUTOINCREMENT,
+                userId INTEGER,
+                carId INTEGER,
+                carName TEXT,
+                carImage BLOB,
+                startDate TEXT,
+                endDate TEXT,
+                totalPrice REAL,
+                status TEXT
+            )
+        """.trimIndent())
+        }
+
+        if (!isTableExists(db, "Payment")) {
+            db.execSQL("""
+            CREATE TABLE Payment (
+            paymentId INTEGER PRIMARY KEY AUTOINCREMENT,
+            bookingId INTEGER,
+            amount REAL,
+            paymentDate TEXT,
+            status TEXT,
+            FOREIGN KEY(bookingId) REFERENCES Booking(bookingId)
+            )
+        """.trimIndent())
+        }
+    }
+
+
+
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         db.execSQL("DROP TABLE IF EXISTS alamat")
         db.execSQL("DROP TABLE IF EXISTS users")
         db.execSQL("DROP TABLE IF EXISTS Car")
         db.execSQL("DROP TABLE IF EXISTS CarCategory")
+        db.execSQL("DROP TABLE IF EXISTS Booking")
+        db.execSQL("DROP TABLE IF EXISTS Payment")
+
         onCreate(db)
     }
 
     // --- FUNGSI UNTUK MOBIL ---
+
+    fun addBooking(booking: Booking): Boolean {
+        val db = this.writableDatabase
+        val values = ContentValues().apply {
+            put("userId", booking.userId)
+            put("carId", booking.carId)
+            put("carName", booking.carName)
+            put("carImage", booking.carImage)
+            put("startDate", booking.startDate)
+            put("endDate", booking.endDate)
+            put("totalPrice", booking.totalPrice)
+            put("status", booking.status)
+        }
+        val result = db.insert("Booking", null, values)
+        return result != -1L
+    }
+
+    @SuppressLint("Range")
+    fun getAllBookings(): List<Booking> {
+        val bookingList = mutableListOf<Booking>()
+        val db = this.readableDatabase
+        val cursor = db.rawQuery("SELECT * FROM Booking ORDER BY bookingId DESC", null)
+
+        if (cursor.moveToFirst()) {
+            do {
+                bookingList.add(
+                    Booking(
+                        bookingId = cursor.getInt(cursor.getColumnIndex("bookingId")),
+                        userId = cursor.getInt(cursor.getColumnIndex("userId")),
+                        carId = cursor.getInt(cursor.getColumnIndex("carId")),
+                        carName = cursor.getString(cursor.getColumnIndex("carName")),
+                        carImage = cursor.getBlob(cursor.getColumnIndex("carImage")),
+                        startDate = cursor.getString(cursor.getColumnIndex("startDate")),
+                        endDate = cursor.getString(cursor.getColumnIndex("endDate")),
+                        totalPrice = cursor.getDouble(cursor.getColumnIndex("totalPrice")),
+                        status = cursor.getString(cursor.getColumnIndex("status"))
+                    )
+                )
+            } while (cursor.moveToNext())
+        }
+        cursor.close()
+        return bookingList
+    }
+
+
+    @SuppressLint("Range")
+    fun getBookingsForUser(userId: Int): List<Booking> {
+        val bookingList = mutableListOf<Booking>()
+        val db = this.readableDatabase
+        val cursor = db.rawQuery("SELECT * FROM Booking WHERE userId = ? ORDER BY bookingId DESC", arrayOf(userId.toString()))
+
+        if (cursor.moveToFirst()) {
+            do {
+                bookingList.add(
+                    Booking(
+                        bookingId = cursor.getInt(cursor.getColumnIndex("bookingId")),
+                        userId = cursor.getInt(cursor.getColumnIndex("userId")),
+                        carId = cursor.getInt(cursor.getColumnIndex("carId")),
+                        carName = cursor.getString(cursor.getColumnIndex("carName")),
+                        carImage = cursor.getBlob(cursor.getColumnIndex("carImage")),
+                        startDate = cursor.getString(cursor.getColumnIndex("startDate")),
+                        endDate = cursor.getString(cursor.getColumnIndex("endDate")),
+                        totalPrice = cursor.getDouble(cursor.getColumnIndex("totalPrice")),
+                        status = cursor.getString(cursor.getColumnIndex("status"))
+                    )
+                )
+            } while (cursor.moveToNext())
+        }
+        cursor.close()
+        return bookingList
+    }
+
+    @SuppressLint("Range")
+    fun getBookingById(bookingId: Int): Booking? {
+        val db = readableDatabase
+        val cursor = db.rawQuery("SELECT * FROM Booking WHERE bookingId = ?", arrayOf(bookingId.toString()))
+        var booking: Booking? = null
+        if (cursor.moveToFirst()) {
+            booking = Booking(
+                bookingId = cursor.getInt(cursor.getColumnIndex("bookingId")),
+                userId = cursor.getInt(cursor.getColumnIndex("userId")),
+                carId = cursor.getInt(cursor.getColumnIndex("carId")),
+                carName = cursor.getString(cursor.getColumnIndex("carName")),
+                carImage = cursor.getBlob(cursor.getColumnIndex("carImage")),
+                startDate = cursor.getString(cursor.getColumnIndex("startDate")),
+                endDate = cursor.getString(cursor.getColumnIndex("endDate")),
+                totalPrice = cursor.getDouble(cursor.getColumnIndex("totalPrice")),
+                status = cursor.getString(cursor.getColumnIndex("status"))
+            )
+        }
+        cursor.close()
+        return booking
+    }
+
+
+    fun addPayment(payment: Payment): Boolean {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put("bookingId", payment.bookingId)
+            put("amount", payment.amount)
+            put("paymentDate", payment.paymentDate)
+            put("status", payment.status)
+        }
+        return db.insert("Payment", null, values) != -1L
+    }
+
+    fun updateBookingStatus(bookingId: Int, newStatus: String): Boolean {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put("status", newStatus)
+        }
+        val result = db.update("Booking", values, "bookingId = ?", arrayOf(bookingId.toString()))
+        return result > 0
+    }
+
 
     fun addCar(car: Car): Boolean {
         val db = this.writableDatabase

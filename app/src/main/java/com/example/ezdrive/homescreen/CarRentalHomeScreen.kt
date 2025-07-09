@@ -307,9 +307,12 @@ fun FeaturedCarsSection(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Filled.Star, contentDescription = null, tint = Color(0xFFFFD700))
                                 Spacer(Modifier.width(4.dp))
-                                Text("${'$'}{car.rating}", style = MaterialTheme.typography.bodySmall)
+                                Text(text = "${car.rating}", style = MaterialTheme.typography.bodySmall)
+
                                 Spacer(Modifier.weight(1f))
-                                Text("${'$'}{car.seats} seats", style = MaterialTheme.typography.bodySmall)
+
+                                Text(text = "${car.seats} seats", style = MaterialTheme.typography.bodySmall)
+
                             }
                             Spacer(Modifier.height(4.dp))
                             Text(car.transmission, style = MaterialTheme.typography.bodySmall)

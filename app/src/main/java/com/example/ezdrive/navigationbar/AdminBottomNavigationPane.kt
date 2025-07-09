@@ -15,6 +15,7 @@ fun AdminBottomNavigationPane(
     val items = listOf(
         AdminNavItem.Dashboard,
         AdminNavItem.ManageCars,
+        AdminNavItem.ManageBookings,
         AdminNavItem.Profile
     )
 

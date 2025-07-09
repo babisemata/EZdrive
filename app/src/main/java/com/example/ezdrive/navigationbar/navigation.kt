@@ -1,59 +1,48 @@
 package com.example.ezdrive.navigation
 
-import android.database.sqlite.SQLiteOpenHelper
 import android.widget.Toast
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.ezdrive.detailscreen.CarDetailScreen
+import com.example.ezdrive.helper.DBHelper
+import com.example.ezdrive.homescreen.AdminCarListScreen
 import com.example.ezdrive.homescreen.CarRentalHomeScreen
 import com.example.ezdrive.loginpage.LoginScreen
 import com.example.ezdrive.loginpage.RegisterScreen
 import com.example.ezdrive.maps.BranchMapScreen
+import com.example.ezdrive.model.User
+import com.example.ezdrive.navigationbar.AdminBottomNavigationPane
+import com.example.ezdrive.navigationbar.AdminNavItem
 import com.example.ezdrive.navigationbar.BottomNavigationPane
 import com.example.ezdrive.navigationbar.NavItem
-import com.example.ezdrive.navigationbar.AdminBottomNavigationPane
-import com.example.ezdrive.navigationbar.BottomNavigationPane
+import com.example.ezdrive.profile.AdminProfileScreen
 import com.example.ezdrive.profile.ProfileScreen
+import com.example.ezdrive.screens.AdminBookingScreen
+import com.example.ezdrive.screens.PaymentScreen
+import com.example.ezdrive.screens.SewaScreen
+import com.example.ezdrive.screens.admin.AdminAddCarScreen
+import com.example.ezdrive.screens.admin.AdminEditCarScreen
+import com.example.ezdrive.screens.booking.BookingScreen
+import com.example.ezdrive.search.fiturpencarian
 import com.example.ezdrive.service.SessionManager
 import com.example.ezdrive.service.handleLogin
 import com.example.ezdrive.service.handleRegister
-import com.example.ezdrive.screens.SewaScreen
-import com.example.ezdrive.homescreens.AdminDashboardScreen
-import com.example.ezdrive.homescreen.CarItem
-import com.example.ezdrive.detailscreen.CarDetailScreen
-import com.example.ezdrive.homescreen.AdminCarListScreen
-import com.example.ezdrive.navigationbar.AdminNavItem
-import com.example.ezdrive.search.fiturpencarian
-import com.example.ezdrive.profile.EditProfileScreen
-import com.example.ezdrive.screens.admin.AdminAddCarScreen
-import com.example.ezdrive.screens.admin.AdminEditCarScreen
-import android.util.Log
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import com.example.ezdrive.helper.DBHelper
-import com.example.ezdrive.model.User
-
 
 @Composable
 fun AppNavigation(sessionManager: SessionManager) {
     val context = LocalContext.current
     val navController = rememberNavController()
     val isLoggedIn = sessionManager.isLoggedIn()
-
-//    val loggedInEmail = sessionManager.getUserEmail()
-    val loggedInRole= sessionManager.getUserRole()
+    val loggedInRole = sessionManager.getUserRole()
     val isAdmin = loggedInRole == "admin"
 
     val startDestination = if (!isLoggedIn) {
@@ -64,27 +53,12 @@ fun AppNavigation(sessionManager: SessionManager) {
         NavItem.Home.route
     }
 
-    val dbHelper = remember { DBHelper(context) }
-
-    // 1. Siapkan state untuk menampung data user dari database
-    var user by remember { mutableStateOf<User?>(null) }
-
-    // 2. LaunchedEffect untuk mengambil data dari DB saat layar dibuka
-    LaunchedEffect(Unit) {
-        val email = sessionManager.getUserEmail()
-        if (email != null) {
-            // Panggil fungsi yang sudah kita buat di DBHelper
-            user = dbHelper.getUserByEmail(email)
-        }
-    }
-
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route ?: if (isLoggedIn) NavItem.Home.route else "login"
+    val currentRoute = backStackEntry?.destination?.route ?: startDestination
 
     Scaffold(
         bottomBar = {
             if (isLoggedIn) {
-                // Tampilkan bottom bar berdasarkan status admin
                 if (isAdmin) {
                     AdminBottomNavigationPane(
                         currentRoute = currentRoute,
@@ -104,25 +78,14 @@ fun AppNavigation(sessionManager: SessionManager) {
             startDestination = startDestination,
             modifier = Modifier.padding(innerPadding)
         ) {
+            // --- LOGIN & REGISTER ---
             composable("login") {
                 LoginScreen(
                     onLogin = { email, password ->
                         handleLogin(context, email, password) { success, role ->
                             if (success) {
                                 sessionManager.saveLogin(email, role)
-                                Toast.makeText(context, "Login as $role", Toast.LENGTH_SHORT).show()
-
-                                // ## BAGIAN YANG MEMPERBAIKI MASALAH ANDA ADA DI SINI ##
-                                Log.d("LOGIN_DEBUG", "Role yang diterima dari handleLogin: '$role'")
-
-                                // 1. Tentukan tujuan berdasarkan 'role'
-                                val destination = if (role == "admin") {
-                                    AdminNavItem.Dashboard.route // Jika admin, ke dashboard
-                                } else {
-                                    NavItem.Home.route // Jika bukan, ke home biasa
-                                }
-                                Log.d("LOGIN_DEBUG", "Tujuan navigasi yang dipilih: '$destination'")
-                                // 2. Navigasi ke tujuan yang benar
+                                val destination = if (role == "admin") AdminNavItem.Dashboard.route else NavItem.Home.route
                                 navController.navigate(destination) {
                                     popUpTo("login") { inclusive = true }
                                 }
@@ -131,135 +94,80 @@ fun AppNavigation(sessionManager: SessionManager) {
                             }
                         }
                     },
-                    onNavigateToRegister = {
-                        navController.navigate("register")
-                    }
+                    onNavigateToRegister = { navController.navigate("register") }
                 )
             }
             composable("register") {
                 RegisterScreen(
                     onRegister = { name, email, password ->
                         handleRegister(context, name, email, password) { success, message ->
-                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                             if (success) {
-                                navController.navigate("login") {
-                                    popUpTo("register") { inclusive = true }
-                                }
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                navController.popBackStack()
+                            } else {
+                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
-                    onNavigateToLogin = {
-                        navController.navigate("login") {
-                            popUpTo("register") { inclusive = true }
-                        }
-                    }
+                    onNavigateToLogin = { navController.popBackStack() }
                 )
             }
 
+            // --- USER FLOW ---
             composable(NavItem.Home.route) {
                 CarRentalHomeScreen(
-                    onNavigate = { navController.navigate(it) },
+                    onNavigate = { route -> navController.navigate(route) },
                     onCarClicked = { selectedCar ->
-                        navController.currentBackStackEntry?.savedStateHandle?.set("selected_car", selectedCar)
-                        navController.navigate("car_detail")
+                        navController.navigate("car_detail/${selectedCar.carFromDb.carid}")
                     },
-                    onProfile = {
-                        navController.navigate(NavItem.Profile.route) {
-                            launchSingleTop = true
-                        }
-                    }
+                    onProfile = { navController.navigate(NavItem.Profile.route) }
                 )
             }
 
             composable(NavItem.Sewa.route) {
                 SewaScreen(
-                    currentRoute = currentRoute,
-                    onNavigate = { navController.navigate(it) },
-                    onBookingClick = { /* TODO */ }
+                    onPayClicked = { bookingId ->
+                        navController.navigate("payment/$bookingId")
+                    }
+                )
+            }
+
+            composable(AdminNavItem.ManageBookings.route) {
+                AdminBookingScreen()
+            }
+
+            composable(
+                route = "payment/{bookingId}",
+                arguments = listOf(navArgument("bookingId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val bookingId = backStackEntry.arguments?.getInt("bookingId") ?: 0
+                PaymentScreen(
+                    bookingId = bookingId,
+                    onPaymentSuccess = {
+                        navController.popBackStack()
+                    }
                 )
             }
 
             composable(NavItem.Profile.route) {
+                val dbHelper = remember { DBHelper(context) }
+                var user by remember { mutableStateOf<User?>(null) }
+                LaunchedEffect(Unit) {
+                    sessionManager.getUserEmail()?.let { email ->
+                        user = dbHelper.getUserByEmail(email)
+                    }
+                }
                 ProfileScreen(
                     userName = user?.username ?: "...",
                     userEmail = user?.email ?: "-",
                     userRole = user?.role ?: "-",
                     userPhone = user?.no_hp,
-                    onEdit   = { navController.navigate("edit_profile") },
+                    onEdit   = { /* navController.navigate("edit_profile") */ },
                     onLogout = {
                         sessionManager.clearSession()
-                        navController.navigate("login") {
-                            popUpTo(0) { inclusive = true }
-                        }
+                        navController.navigate("login") { popUpTo(0) { inclusive = true } }
                     },
-                    onBack = {
-                        navController.navigate(NavItem.Home.route) {
-                            launchSingleTop = true
-                        }
-                    }
-                )
-            }
-
-            composable("map") {
-                BranchMapScreen(
-                    address = "Jln. Patih Jelantik No.102, Gianyar",
-                    branchName = "Cabang Utama EZ Drive",
                     onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(AdminNavItem.Dashboard.route) {
-                AdminCarListScreen(
-                    onAddCarClicked = {
-                        navController.navigate("admin_add_car")
-                    },
-                    onEditCarClicked = { carId ->
-                        navController.navigate("admin_edit_car/$carId")
-                    }
-                )
-            }
-
-            composable("admin_add_car") {
-                AdminAddCarScreen(
-                    onCarAdded = {
-                        // Kembali ke layar daftar setelah berhasil menambah
-                        navController.popBackStack()
-                    }
-                )
-            }
-
-            composable(
-                route = "admin_edit_car/{carId}",
-                arguments = listOf(navArgument("carId") { type = NavType.IntType })
-            ) { backStackEntry ->
-                val carId = backStackEntry.arguments?.getInt("carId") ?: 0
-                AdminEditCarScreen(
-                    carId = carId,
-                    onCarUpdated = {
-                        // Kembali ke layar daftar setelah berhasil update
-                        navController.popBackStack()
-                    }
-                )
-            }
-            composable(AdminNavItem.Profile.route) {
-                // Gunakan ProfileScreen yang sudah ada dengan logika logout yang sama
-                ProfileScreen(
-                    userName = user?.username ?: "...",
-                    userEmail = user?.email ?: "-",
-                    userRole = user?.role ?: "-",
-                    userPhone = user?.no_hp,
-                    onEdit   = { /* Mungkin halaman edit admin berbeda */ },
-                    onLogout = {
-                        sessionManager.clearSession()
-                        navController.navigate("login") {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    },
-                    onBack = {
-                        navController.navigate(AdminNavItem.Dashboard.route) {
-                            launchSingleTop = true
-                        }
-                    }
                 )
             }
 
@@ -267,29 +175,103 @@ fun AppNavigation(sessionManager: SessionManager) {
                 fiturpencarian(
                     onBack = { navController.popBackStack() },
                     onCarClicked = { car ->
-                        // set selected_car dan navigasi ke detail, misal:
-                        navController.currentBackStackEntry
-                            ?.savedStateHandle
-                            ?.set("selected_car", car)
-                        navController.navigate("car_detail")
+                        navController.navigate("car_detail/${car.carFromDb.carid}")
+                    }
+                )
+            }
+
+            // --- ADMIN FLOW ---
+            composable(AdminNavItem.Dashboard.route) {
+                AdminCarListScreen(
+                    onAddCarClicked = { navController.navigate("admin_add_car") },
+                    onEditCarClicked = { carId -> navController.navigate("admin_edit_car/$carId") }
+                )
+            }
+
+            composable("admin_add_car") {
+                AdminAddCarScreen(onCarAdded = { navController.popBackStack() })
+            }
+
+            composable("admin_edit_car/{carId}", arguments = listOf(navArgument("carId") { type = NavType.IntType })) { backStackEntry ->
+                val carId = backStackEntry.arguments?.getInt("carId") ?: 0
+                AdminEditCarScreen(
+                    carId = carId,
+                    onCarUpdated = { navController.popBackStack() }
+                )
+            }
+
+            composable(AdminNavItem.Profile.route) {
+                // 1. Inisialisasi DBHelper
+                val dbHelper = remember { DBHelper(context) }
+                var adminUser by remember { mutableStateOf<User?>(null) }
+
+                // 2. Ambil data saat layar pertama kali dibuka
+                LaunchedEffect(Unit) {
+                    sessionManager.getUserEmail()?.let { email ->
+                        // Ambil data lengkap admin dari database berdasarkan email
+                        adminUser = dbHelper.getUserByEmail(email)
+                    }
+                }
+
+                // 3. Tampilkan layar profil dengan data yang sudah diambil
+                AdminProfileScreen(
+                    // Gunakan data dari state, beri nilai default "..." saat masih loading
+                    adminEmail = adminUser?.email ?: "...",
+
+                    onBack = {
+                        navController.navigate(AdminNavItem.Dashboard.route) {
+                            popUpTo(AdminNavItem.Dashboard.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+
+                    onLogout = {
+                        sessionManager.clearSession()
+                        navController.navigate("login") {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            // --- COMMON SCREENS (Detail, Booking, Map) ---
+            composable(
+                route = "car_detail/{carId}",
+                arguments = listOf(navArgument("carId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val carId = backStackEntry.arguments?.getInt("carId") ?: 0
+                CarDetailScreen(
+                    carId = carId,
+                    onBack = { navController.popBackStack() },
+                    onRentNow = { carItem ->
+                        navController.navigate("booking/${carItem.carFromDb.carid}")
+                    }
+                )
+            }
+
+            composable(
+                route = "booking/{carId}",
+                arguments = listOf(navArgument("carId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val carId = backStackEntry.arguments?.getInt("carId") ?: 0
+                BookingScreen (
+                    carId = carId,
+                    onBack = { navController.popBackStack() }, // Tambahkan ini
+                    onBookingSuccess = {
+                        navController.navigate(NavItem.Sewa.route) {
+                            popUpTo(NavItem.Home.route)
+                        }
                     }
                 )
             }
 
 
-            composable("car_detail") {
-                val car = navController.previousBackStackEntry
-                    ?.savedStateHandle?.get<CarItem>("selected_car")
-
-                car?.let {
-                    CarDetailScreen(
-                        car = it,
-                        onBack = { navController.popBackStack() },
-                        onRentNow = { selected ->
-                            // Navigasi ke halaman pemesanan
-                        }
-                    )
-                }
+            composable("map") {
+                BranchMapScreen(
+                    address = "Jln. Patih Jelantik No.102, Gianyar",
+                    branchName = "Cabang Utama EZ Drive",
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }
