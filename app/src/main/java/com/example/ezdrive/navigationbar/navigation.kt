@@ -1,5 +1,6 @@
 package com.example.ezdrive.navigation
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,6 +32,7 @@ import com.example.ezdrive.navigationbar.AdminNavItem
 import com.example.ezdrive.navigationbar.BottomNavigationPane
 import com.example.ezdrive.navigationbar.NavItem
 import com.example.ezdrive.profile.AdminProfileScreen
+import com.example.ezdrive.homescreen.AdminBrowseCarsScreen
 import com.example.ezdrive.profile.EditProfileScreen
 import com.example.ezdrive.profile.ProfileScreen
 import com.example.ezdrive.screens.AdminBookingScreen
@@ -390,6 +392,21 @@ fun AppNavigation(sessionManager: SessionManager) {
                     onBack = { navController.popBackStack() }
                 )
             }
+
+            composable(AdminNavItem.ManageCars.route) {
+                val context = LocalContext.current
+                val dbHelper = remember { DBHelper(context) }
+
+                AdminBrowseCarsScreen(
+                    dbHelper = dbHelper,
+                    onCarClicked = { carId ->
+                        navController.navigate("admin_edit_car/$carId")
+                    }
+                )
+            }
+
+
+
         }
     }
 }

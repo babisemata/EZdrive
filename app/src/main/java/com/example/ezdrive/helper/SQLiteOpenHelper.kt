@@ -24,6 +24,8 @@ import com.example.ezdrive.model.Payment
 import com.example.ezdrive.model.User
 import java.io.InputStream
 import java.security.MessageDigest
+import com.example.ezdrive.util.mapIconNameToVector
+
 
 class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", null, 1) {
 
@@ -503,44 +505,63 @@ class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", nul
     // --- FUNGSI UNTUK KATEGORI ---
 
     @SuppressLint("Range")
+//    fun getAllCategories(): List<CarCategory> {
+//        // 1. Siapkan list kosong untuk menampung hasil
+//        val categoryList = mutableListOf<CarCategory>()
+//
+//        // 2. Dapatkan database yang bisa dibaca
+//        val db = this.readableDatabase
+//
+//        // 3. Jalankan query untuk mengambil semua data dari tabel CarCategory
+//        val cursor = db.rawQuery("SELECT * FROM CarCategory", null)
+//
+//        // 4. Lakukan loop untuk setiap baris data yang ditemukan
+//        if (cursor.moveToFirst()) {
+//            do {
+//                // Ambil data dari setiap kolom
+//                val id = cursor.getString(cursor.getColumnIndex("id"))
+//                val name = cursor.getString(cursor.getColumnIndex("name"))
+//                val iconName = cursor.getString(cursor.getColumnIndex("iconName"))
+//                val icon = mapIconNameToVector(iconName)
+//                // Buat objek CarCategory
+//                val category = CarCategory(
+//                    id = id,
+//                    name = name,
+//                    // Gunakan fungsi mapIconNameToVector yang sudah ada untuk mengubah String menjadi ImageVector
+//                    icon = mapIconNameToVector(iconName)
+//                )
+//
+//                // Tambahkan objek ke dalam list
+//                categoryList.add(category)
+//
+//            } while (cursor.moveToNext())
+//        }
+//
+//        // 5. Tutup cursor untuk menghindari memory leak
+//        cursor.close()
+//
+//        // 6. Kembalikan list yang sudah terisi
+//        return categoryList
+//    }
+
     fun getAllCategories(): List<CarCategory> {
-        // 1. Siapkan list kosong untuk menampung hasil
-        val categoryList = mutableListOf<CarCategory>()
-
-        // 2. Dapatkan database yang bisa dibaca
-        val db = this.readableDatabase
-
-        // 3. Jalankan query untuk mengambil semua data dari tabel CarCategory
+        val db = readableDatabase
         val cursor = db.rawQuery("SELECT * FROM CarCategory", null)
 
-        // 4. Lakukan loop untuk setiap baris data yang ditemukan
-        if (cursor.moveToFirst()) {
-            do {
-                // Ambil data dari setiap kolom
-                val id = cursor.getString(cursor.getColumnIndex("id"))
-                val name = cursor.getString(cursor.getColumnIndex("name"))
-                val iconName = cursor.getString(cursor.getColumnIndex("iconName"))
+        val categories = mutableListOf<CarCategory>()
+        while (cursor.moveToNext()) {
+            val id = cursor.getString(cursor.getColumnIndexOrThrow("id"))
+            val name = cursor.getString(cursor.getColumnIndexOrThrow("name"))
+            val iconName = cursor.getString(cursor.getColumnIndexOrThrow("iconName"))
+            val icon = mapIconNameToVector(iconName)
 
-                // Buat objek CarCategory
-                val category = CarCategory(
-                    id = id,
-                    name = name,
-                    // Gunakan fungsi mapIconNameToVector yang sudah ada untuk mengubah String menjadi ImageVector
-                    icon = mapIconNameToVector(iconName)
-                )
-
-                // Tambahkan objek ke dalam list
-                categoryList.add(category)
-
-            } while (cursor.moveToNext())
+            categories.add(CarCategory(id, name, icon))
         }
 
-        // 5. Tutup cursor untuk menghindari memory leak
         cursor.close()
-
-        // 6. Kembalikan list yang sudah terisi
-        return categoryList
+        return categories
     }
+
 
     private fun hashPassword(password: String): String {
         val bytes = password.toByteArray()
@@ -726,4 +747,5 @@ class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", nul
         db.close()
         return list
     }
+
 }
