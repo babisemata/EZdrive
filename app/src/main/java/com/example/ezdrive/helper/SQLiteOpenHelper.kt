@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.net.Uri
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -19,6 +20,7 @@ import com.example.ezdrive.model.Car
 import com.example.ezdrive.model.CarCategory
 import com.example.ezdrive.model.Payment
 import com.example.ezdrive.model.User
+import java.io.InputStream
 import java.security.MessageDigest
 
 class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", null, 1) {
@@ -32,6 +34,7 @@ class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", nul
                 username TEXT,
                 email TEXT UNIQUE,
                 password TEXT,
+                profilePicture BLOB,
                 no_hp TEXT,
                 tanggal_lahir TEXT,
                 role TEXT
@@ -189,8 +192,6 @@ class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", nul
         """.trimIndent())
         }
     }
-
-
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         db.execSQL("DROP TABLE IF EXISTS alamat")
@@ -397,15 +398,35 @@ class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", nul
         val db = readableDatabase
         val cursor = db.rawQuery("SELECT * FROM users WHERE email = ?", arrayOf(email))
         var user: User? = null
+
         if (cursor.moveToFirst()) {
+            // Ambil semua data dari setiap kolom
+            val id = cursor.getInt(cursor.getColumnIndexOrThrow("id"))
+            val username = cursor.getString(cursor.getColumnIndexOrThrow("username"))
+            val password = cursor.getString(cursor.getColumnIndexOrThrow("password")) // Tetap ambil meski tidak ditampilkan
+            val no_hp = cursor.getString(cursor.getColumnIndexOrThrow("no_hp"))
+            val tanggal_lahir = cursor.getString(cursor.getColumnIndexOrThrow("tanggal_lahir"))
+            val role = cursor.getString(cursor.getColumnIndexOrThrow("role"))
+
+            // --- INI BAGIAN YANG HILANG ---
+            // 1. Ambil data gambar dari kolom BLOB
+            val profilePicture = cursor.getBlob(cursor.getColumnIndexOrThrow("profilePicture"))
+
+            // 2. Ambil data alamat menggunakan fungsi yang sudah ada
+            val alamatList = getAlamatByUser(id)
+            // ---------------------------------
+
+            // Buat objek User dengan SEMUA data yang sudah diambil
             user = User(
-                id = cursor.getInt(cursor.getColumnIndex("id")),
-                username = cursor.getString(cursor.getColumnIndex("username")),
-                email = cursor.getString(cursor.getColumnIndex("email")),
-                password = cursor.getString(cursor.getColumnIndex("password")),
-                no_hp = cursor.getString(cursor.getColumnIndex("no_hp")),
-                tanggal_lahir = cursor.getString(cursor.getColumnIndex("tanggal_lahir")),
-                role = cursor.getString(cursor.getColumnIndex("role"))
+                id = id,
+                username = username,
+                email = email,
+                password = password,
+                profilePicture = profilePicture, // Masukkan data gambar di sini
+                alamat = alamatList,             // Masukkan data alamat di sini
+                no_hp = no_hp,
+                tanggal_lahir = tanggal_lahir,
+                role = role
             )
         }
         cursor.close()
@@ -524,36 +545,81 @@ class DBHelper(context: Context) : SQLiteOpenHelper(context, "EzDriveDB.db", nul
         return res != -1L
     }
 
+    fun updateUserProfile(email: String, username: String, phone: String): Int {
+        // Dapatkan database yang bisa ditulis
+        val db = this.writableDatabase
+
+        // Siapkan data baru yang akan di-update
+        val contentValues = ContentValues()
+        contentValues.put("username", username)
+        contentValues.put("no_hp", phone)
+
+        // Lakukan update pada tabel 'users' untuk baris yang email-nya cocok
+        // Fungsi update mengembalikan jumlah baris yang terpengaruh
+        return db.update("users", contentValues, "email = ?", arrayOf(email))
+    }
+
+    fun updateUserProfilePicture(email: String, imageBytes: ByteArray): Int {
+        // Dapatkan database yang bisa ditulis
+        val db = this.writableDatabase
+
+        // Siapkan data gambar baru yang akan di-update
+        val contentValues = ContentValues()
+        contentValues.put("profilePicture", imageBytes)
+
+        // Lakukan update pada tabel 'users' untuk baris yang email-nya cocok.
+        // Fungsi ini akan mengembalikan jumlah baris yang berhasil di-update.
+        return db.update("users", contentValues, "email = ?", arrayOf(email))
+    }
+
+
     fun login(email: String, password: String): User? {
         val db = readableDatabase
-        // 1. Cari user berdasarkan email saja
         val cursor = db.rawQuery(
-            "SELECT * FROM users WHERE email=?",
+            "SELECT * FROM users WHERE email = ?",
             arrayOf(email)
         )
 
         var user: User? = null
         if (cursor.moveToFirst()) {
+            // validasi password
             val storedHashedPassword = cursor.getString(cursor.getColumnIndexOrThrow("password"))
-            // 2. Hash password yang diinput pengguna saat login
             val inputHashedPassword = hashPassword(password)
-
-            // 3. Bandingkan hash yang tersimpan dengan hash dari input
             if (storedHashedPassword == inputHashedPassword) {
-                // Jika cocok, baru ambil data user
-                val id = cursor.getInt(cursor.getColumnIndexOrThrow("id"))
-                val username = cursor.getString(cursor.getColumnIndexOrThrow("username"))
-                val no_hp = cursor.getString(cursor.getColumnIndexOrThrow("no_hp"))
-                val tanggal_lahir = cursor.getString(cursor.getColumnIndexOrThrow("tanggal_lahir"))
-                val role = cursor.getString(cursor.getColumnIndexOrThrow("role"))
-                val alamatList = getAlamatByUser(id)
+                // baca kolom wajib
+                val id             = cursor.getInt   (cursor.getColumnIndexOrThrow("id"))
+                val username       = cursor.getString(cursor.getColumnIndexOrThrow("username"))
+                val no_hp          = cursor.getString(cursor.getColumnIndexOrThrow("no_hp"))
+                val tanggal_lahir  = cursor.getString(cursor.getColumnIndexOrThrow("tanggal_lahir"))
+                val role           = cursor.getString(cursor.getColumnIndexOrThrow("role"))
+                val alamatList     = getAlamatByUser(id)
 
-                user = User(id, username, email, "", alamatList, no_hp, tanggal_lahir, role)
+                // Cek dulu apakah kolom profilePicture ada:
+                val picIndex = cursor.getColumnIndex("profilePicture")
+                val profilePicture: ByteArray? = if (picIndex != -1) {
+                    cursor.getBlob(picIndex)
+                } else {
+                    null
+                }
+
+                // bangun objek User—password kita skip
+                user = User(
+                    id              = id,
+                    username        = username,
+                    email           = email,
+                    password        = "",              // kosongkan
+                    profilePicture  = profilePicture,  // bisa null
+                    alamatList      = alamatList,
+                    no_hp           = no_hp,
+                    tanggal_lahir   = tanggal_lahir,
+                    role            = role
+                )
             }
         }
         cursor.close()
         return user
     }
+
 
     fun insertAlamat(alamat: Alamat): Boolean {
         val db = writableDatabase

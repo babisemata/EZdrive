@@ -1,19 +1,20 @@
 package com.example.ezdrive.profile
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
+import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -25,11 +26,12 @@ fun ProfileScreen(
     userPhone: String? = null,
     userRole: String = "User",
     userLocation: String = "USA",
+    // terima data gambar sebagai ByteArray jika ada
+    profilePictureData: ByteArray? = null,
     onEdit: () -> Unit,
     onBack: () -> Unit,
     onLogout: () -> Unit
 ) {
-    val context = LocalContext.current
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -38,20 +40,40 @@ fun ProfileScreen(
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Jika ada ByteArray, pakai sebagai model; jika tidak, gunakan avatar default
+            val placeholderPainter = rememberVectorPainter(image = Icons.Default.AccountCircle)
 
             AsyncImage(
-                model = "https://api.dicebear.com/8.x/fun-emoji/png?seed=AstroBear",
-                contentDescription = "AstroBear Profile",
+                // Model HANYA berisi data gambar utama Anda
+                model = profilePictureData,
+
+                contentDescription = "Profile Picture",
+
+                // Placeholder akan ditampilkan saat model sedang loading atau null
+                placeholder = placeholderPainter,
+
+                // Error akan ditampilkan jika gagal memuat model
+                error = placeholderPainter,
+
                 modifier = Modifier
                     .size(80.dp)
-                    .clip(CircleShape),
+                    .clip(CircleShape)
+                    .clickable { onEdit() },
                 contentScale = ContentScale.Crop
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(userName, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Text(userEmail, color = Color.Gray, fontSize = 14.sp)
+            Text(
+                text = userName,
+                fontSize = 18.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+            )
+            Text(
+                text = userEmail,
+                color = Color.Gray,
+                fontSize = 14.sp
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -68,28 +90,38 @@ fun ProfileScreen(
             ) {
                 Text("Edit Profile")
             }
-            Button(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = onLogout,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text("Logout")
             }
-
 
             Spacer(modifier = Modifier.height(8.dp))
 
             TextButton(onClick = onBack) {
                 Text("Back to Home")
             }
-
-
         }
     }
 }
 
 @Composable
 fun ProfileItem(label: String, value: String) {
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(vertical = 6.dp)) {
-        Text(text = label, color = Color.Gray, fontSize = 12.sp)
-        Text(text = value, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+    ) {
+        Text(
+            text = label,
+            color = Color.Gray,
+            fontSize = 12.sp
+        )
+        Text(
+            text = value,
+            fontSize = 16.sp,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+        )
     }
 }

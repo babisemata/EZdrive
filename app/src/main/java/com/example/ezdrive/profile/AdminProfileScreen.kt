@@ -20,7 +20,8 @@ import coil.compose.AsyncImage
 fun AdminProfileScreen(
     adminEmail: String,
     onBack: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onEdit: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -71,6 +72,14 @@ fun AdminProfileScreen(
             )
 
             Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = onEdit,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Edit Profile")
+            }
 
             // Logout Button
             Button(
