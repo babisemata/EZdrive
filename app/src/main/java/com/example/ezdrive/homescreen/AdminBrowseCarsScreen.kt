@@ -18,13 +18,18 @@ import coil.compose.AsyncImage
 import com.example.ezdrive.model.Car
 import androidx.compose.ui.platform.LocalContext
 import com.example.ezdrive.helper.DBHelper
+import java.text.NumberFormat
+import java.util.Locale
 
 @Composable
 fun AdminBrowseCarsScreen(
     dbHelper: DBHelper,
-    onCarClicked: (Int) -> Unit  // hanya kirim carId
+    onCarClicked: (Int) -> Unit
 ) {
-    // Load categories dan semua mobil
+    // definisikan sekali saja
+    val formatRupiah = remember {
+        NumberFormat.getCurrencyInstance(Locale("in", "ID"))
+    }
     val categories = remember { dbHelper.getAllCategories() }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
     val cars = remember(selectedCategory) {
@@ -35,36 +40,39 @@ fun AdminBrowseCarsScreen(
         }
     }
 
-
-
-
-        // 2) Grid daftar mobil
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(8.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(cars) { car ->
-                Card(
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .clickable { onCarClicked(car.carid) }
-                ) {
-                    Column {
-                        AsyncImage(
-                            model = car.foto,
-                            contentDescription = "${car.merk} ${car.model}",
-                            modifier = Modifier
-                                .height(120.dp)
-                                .fillMaxWidth(),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text("${car.merk} ${car.model}", modifier = Modifier.padding(4.dp), fontWeight = FontWeight.Bold)
-                        Text("Rp ${car.hargaPerHari?.toInt()}", modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
-                    }
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        contentPadding = PaddingValues(8.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        items(cars) { car ->
+            Card(
+                modifier = Modifier
+                    .padding(4.dp)
+                    .clickable { onCarClicked(car.carid) }
+            ) {
+                Column {
+                    AsyncImage(
+                        model = car.foto,
+                        contentDescription = "${car.merk} ${car.model}",
+                        modifier = Modifier
+                            .height(120.dp)
+                            .fillMaxWidth(),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "${car.merk} ${car.model}",
+                        modifier = Modifier.padding(start = 4.dp),
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = formatRupiah.format(car.hargaPerHari ?: 0.0),
+                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                    )
                 }
             }
         }
     }
-
+}
